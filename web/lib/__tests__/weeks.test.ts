@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentWeekNumber, dayMonth, gatePassed, todayLondon, weekdayShort } from "../weeks";
+import { checkinDue, currentWeekNumber, dayMonth, gatePassed, todayLondon, weekdayShort } from "../weeks";
 import { isRestDay, runLabel } from "../labels";
 import type { PlanWeek } from "../types";
 
@@ -76,5 +76,23 @@ describe("labels", () => {
     expect(isRestDay("not_recorded")).toBe(true);
     expect(isRestDay(undefined)).toBe(true);
     expect(isRestDay("easy")).toBe(false);
+  });
+});
+
+
+describe("checkinDue", () => {
+  it("stays quiet Monday to Friday", () => {
+    for (const day of ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06"]) {
+      expect(checkinDue(day, false), day).toBe(false);
+    }
+  });
+
+  it("reminds on Saturday and Sunday when this week's check in is not done", () => {
+    expect(checkinDue("2026-11-07", false)).toBe(true); // Saturday
+    expect(checkinDue("2026-11-08", false)).toBe(true); // Sunday
+  });
+
+  it("stays quiet once this week's check in is done", () => {
+    expect(checkinDue("2026-11-08", true)).toBe(false);
   });
 });

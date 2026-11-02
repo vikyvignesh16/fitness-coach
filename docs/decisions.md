@@ -185,3 +185,11 @@ Alternatives: let the web app call COROS directly (needs tokens in the web servi
 Cost: up to 5 minutes between approving and the watch having it. A failed send needs a human. The format of COROS's success answer was not known, so the job only counts a send as done when it sees a workout id, and otherwise records what COROS said.
 Revisit when: the first real send shows what COROS actually returns, or COROS adds a delete tool.
 Status: open
+
+## 2026-11-02 Weekly check in: pain stop blocks the watch, photos upload from the phone
+Chose: the check in form saves weight, height, how you feel, pain answers and three photos. The server works out the pain stop from the answers (the browser cannot send its own result) and saves it. While the newest check in says stop, the Approve runs page refuses new approvals and the watch job holds runs that were already approved, without failing them. A later check in without a stop clears it. Photos are shrunk in the browser to a 1600 pixel JPEG, uploaded straight to the private bucket in a folder named with the user id, and shown only through links that expire after an hour. The database holds only the path, and a rule checks the path has the right shape. A retaken photo is deleted before the new one is uploaded.
+Why: CLAUDE.md says persistent pain stops the plan, so the code enforces it rather than relying on Vicky or a prompt. Uploading from the browser avoids the server's size limit for three photos and keeps the file off our servers. The storage rules allow upload, read and delete but not overwrite, so replacing a photo means delete then upload.
+Alternatives: only show a warning on a stop, send photos through a server action, add an overwrite rule to storage.
+Cost: a stop also holds runs Vicky already approved, so she must do a clean check in, or see a professional, to release them. The pain rules exist twice (Python and TypeScript), kept in step by a test that reads the Python file. The weekend reminder (Saturday and Sunday) is a guess, because the plan does not say which day the check in is.
+Revisit when: Vicky says which day she does the check in, or a stop should not hold approved runs.
+Status: open

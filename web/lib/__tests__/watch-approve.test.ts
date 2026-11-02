@@ -7,7 +7,7 @@ import type { PlanDay } from "../types";
 const TODAY = "2026-11-03";
 const RECOVERY: PlannedRun = { week: 2, type: "recovery", distanceKm: 5 };
 
-function fakeDb(opts: { runs?: Record<string, PlannedRun | null>; locked?: boolean; version?: string | null; fail?: boolean } = {}) {
+function fakeDb(opts: { runs?: Record<string, PlannedRun | null>; locked?: boolean; version?: string | null; fail?: boolean; painStop?: boolean } = {}) {
   const approvals = new Map<string, string>();
   const calls: string[] = [];
   const db: ApproveDb = {
@@ -16,6 +16,7 @@ function fakeDb(opts: { runs?: Record<string, PlannedRun | null>; locked?: boole
       return opts.runs ? (opts.runs[date] ?? null) : RECOVERY;
     },
     async isWeekLocked() { calls.push("lock"); return opts.locked ?? false; },
+    async isPainStopped() { return opts.painStop ?? false; },
     async planVersionId() { return opts.version === undefined ? "v1" : opts.version; },
     async insertApproval(row) {
       if (opts.fail) throw new Error('duplicate key value violates unique constraint "secret_index_name"');
@@ -40,6 +41,14 @@ describe("approveRuns", () => {
     const late = (await approveRuns(fakeDb().db, ["2027-02-02"], TODAY))[0];
     expect(late.status).toBe("refused");
     expect(late.status === "refused" && late.error).toMatch(/90 days/);
+  });
+
+  it("refuses everything while the newest check in says stop, and writes nothing", async () => {
+    const f = fakeDb({ painStop: true });
+    const r = await approveRuns(f.db, ["2026-11-04", "2026-11-06"], TODAY);
+    expect(r.every((x) => x.status === "refused")).toBe(true);
+    expect(r[0].status === "refused" && r[0].error).toMatch(/sports physio or clinician/);
+    expect(f.approvals.size).toBe(0);
   });
 
   it("refuses a day that has passed", async () => {

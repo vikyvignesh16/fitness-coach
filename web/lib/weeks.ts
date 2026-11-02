@@ -52,3 +52,10 @@ export function mondayOf(date: string): string {
   const dow = new Date(`${date}T00:00:00Z`).getUTCDay(); // 0 is Sunday
   return addDays(date, -((dow + 6) % 7));
 }
+
+/** Remind about the weekly check in from Saturday on, if this week's is not done. Mondays to Fridays stay quiet. */
+export function checkinDue(today: string, hasThisWeeksCheckin: boolean): boolean {
+  if (hasThisWeeksCheckin) return false;
+  const dow = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0 is Sunday
+  return dow === 6 || dow === 0;
+}

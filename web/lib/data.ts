@@ -4,7 +4,7 @@ import { londonDate } from "@/lib/runs";
 import { lockedWeeks } from "@/lib/gates";
 import { sessionProgress, type HistorySet, type LoggedSet, type PlannedExercise } from "@/lib/gym";
 import { upcomingRuns, waitingCount, type ApprovalRow, type UpcomingRun } from "@/lib/watch-approve";
-import { currentWeekNumber, gatePassed, todayLondon } from "@/lib/weeks";
+import { checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLondon } from "@/lib/weeks";
 import type { PlanDay, PlanWeek, RunRow } from "@/lib/types";
 
 import { ANKLE_GATE_ID } from "@/lib/gate-record";
@@ -248,4 +248,83 @@ export async function loadApprovePage(horizonDays = 14): Promise<ApprovePageData
   const locked = lockedWeeks(gatePassed(gates.data ?? []));
   const runs = upcomingRuns(days.data as PlanDay[], approvals.data as ApprovalRow[], locked, today, horizonDays);
   return { runs, waiting: waitingCount(runs) };
+}
+
+// ---- Weekly check in
+
+export type CheckinSummary = {
+  week_start: string;
+  morning_weight_kg: number | null;
+  height_cm: number | null;
+  feeling: string | null;
+  pain_score: number;
+  pain_repeated: boolean;
+  pain_lasted_hours: number;
+  pain_worse_next_morning: boolean;
+  pain_flags: string[];
+  pain_stop: boolean;
+  pain_stop_message: string | null;
+  photo_front: string | null;
+  photo_side: string | null;
+  photo_back: string | null;
+};
+
+export type CheckinPageData = {
+  userId: string;
+  weekStart: string;
+  current: CheckinSummary | null;
+  history: CheckinSummary[];
+  photoUrls: Partial<Record<"front" | "side" | "back", string>>; // links that stop working after an hour
+  stopMessage: string | null; // from the newest check in, if it says stop
+};
+
+export async function loadCheckinPage(): Promise<CheckinPageData> {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Not signed in.");
+  const weekStart = mondayOf(todayLondon());
+
+  const { data, error } = await supabase
+    .from("checkins")
+    .select("week_start, morning_weight_kg, height_cm, feeling, pain_score, pain_repeated, pain_lasted_hours, pain_worse_next_morning, pain_flags, pain_stop, pain_stop_message, photo_front, photo_side, photo_back")
+    .order("week_start", { ascending: false })
+    .limit(8);
+  if (error) throw new Error("Could not read your check ins.");
+
+  const history = (data ?? []) as CheckinSummary[];
+  const current = history.find((c) => c.week_start === weekStart) ?? null;
+
+  // Photos are private. Show them only through links that expire.
+  const photoUrls: CheckinPageData["photoUrls"] = {};
+  if (current) {
+    for (const slot of ["front", "side", "back"] as const) {
+      const path = current[`photo_${slot}`];
+      if (!path) continue;
+      const { data: signed } = await supabase.storage.from("photos").createSignedUrl(path, 3600);
+      if (signed?.signedUrl) photoUrls[slot] = signed.signedUrl;
+    }
+  }
+  return {
+    userId: auth.user.id,
+    weekStart,
+    current,
+    history,
+    photoUrls,
+    stopMessage: history[0]?.pain_stop ? history[0].pain_stop_message : null,
+  };
+}
+
+// ---- Home: things that need attention
+
+export async function loadHomeStatus(): Promise<{ painStopMessage: string | null; checkinDue: boolean }> {
+  const supabase = await createClient();
+  const today = todayLondon();
+  const { data, error } = await supabase
+    .from("checkins").select("week_start, pain_stop, pain_stop_message").order("week_start", { ascending: false }).limit(1);
+  if (error) throw new Error("Could not read your check ins.");
+  const newest = data?.[0];
+  return {
+    painStopMessage: newest?.pain_stop ? (newest.pain_stop_message ?? "Your last check in says stop.") : null,
+    checkinDue: checkinDue(today, newest?.week_start === mondayOf(today)),
+  };
 }

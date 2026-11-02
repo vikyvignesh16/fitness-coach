@@ -26,6 +26,13 @@ export function createApproveDb(supabase: SupabaseClient): ApproveDb {
 
     isWeekLocked: (week) => isWeekLocked(supabase, week),
 
+    async isPainStopped() {
+      const { data, error } = await supabase
+        .from("checkins").select("pain_stop").order("week_start", { ascending: false }).limit(1).maybeSingle();
+      if (error) throw error;
+      return data?.pain_stop === true; // the newest check in decides. A later check in without a stop clears it.
+    },
+
     async insertApproval(row) {
       const { error } = await supabase.from("approvals").insert({ kind: "watch_workout", ...row });
       if (!error) return "created";

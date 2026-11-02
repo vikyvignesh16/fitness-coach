@@ -5,12 +5,16 @@ import type { PlanDay } from "./types";
 
 export const MAX_DAYS_AHEAD = 90; // COROS only accepts dates from today to 90 days ahead
 export const MAX_PER_CALL = 14;
+export const PAIN_STOP_REFUSAL =
+  "Your last check in says stop. See a sports physio or clinician before sending more runs to your watch.";
 
 export type PlannedRun = { week: number; type: string; distanceKm: number };
 
 export interface ApproveDb {
   getPlannedRun(date: string): Promise<PlannedRun | null>;
   isWeekLocked(week: number): Promise<boolean>;
+  /** True when the newest weekly check in says stop. Persistent pain stops the plan (see CLAUDE.md). */
+  isPainStopped(): Promise<boolean>;
   planVersionId(): Promise<string | null>;
   /** 'exists' when that day already has an approval. */
   insertApproval(row: { plan_version_id: string; subject_date: string }): Promise<"created" | "exists">;
@@ -57,6 +61,9 @@ export async function approveRuns(db: ApproveDb, dates: string[], today: string)
   try {
     const versionId = await db.planVersionId();
     if (!versionId) return unique.map((date) => ({ date, status: "refused" as const, error: "Could not find the plan." }));
+    if (await db.isPainStopped()) {
+      return unique.map((date) => ({ date, status: "refused" as const, error: PAIN_STOP_REFUSAL }));
+    }
     const results: ApproveResult[] = [];
     for (const date of unique) {
       try {

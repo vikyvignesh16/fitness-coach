@@ -29,6 +29,7 @@ _ID = re.compile(r"idInPlan\W{0,6}(\d+)")
 
 
 class Db(Protocol):
+    def pain_stop_active(self) -> bool: ...
     def pending(self) -> list[dict]: ...
     def stale(self, older_than: datetime) -> list[dict]: ...
     def plan_run(self, plan_version_id: str, day: str) -> dict | None: ...
@@ -52,14 +53,20 @@ def _ymd(day: str) -> str:
 
 async def send_pending(db: Db, coros: Coros, now: datetime) -> dict:
     """Process every approval that has not been sent. Returns counts only."""
-    counts = {"sent": 0, "already_there": 0, "failed": 0, "skipped": 0, "flagged": 0}
+    counts = {"sent": 0, "already_there": 0, "failed": 0, "skipped": 0, "flagged": 0, "held": 0}
 
     for row in db.stale(now - STALE_AFTER):  # started, never finished: it may already be on the watch
         db.mark_failed(row["id"], "Sending stopped part way. Check the COROS app before sending again.")
         counts["flagged"] += 1
 
+    pending = db.pending()
+    if pending and db.pain_stop_active():
+        # Persistent pain stops the plan (CLAUDE.md). Keep the approvals waiting, do not send and do not fail them.
+        counts["held"] = len(pending)
+        return counts
+
     today = london_today(now)
-    for row in db.pending():
+    for row in pending:
         if not db.claim(row["id"], now):
             counts["skipped"] += 1  # another run got it first
             continue
@@ -109,6 +116,10 @@ class SupabaseDb:
     def __init__(self, sb):
         self.sb = sb
 
+    def pain_stop_active(self):
+        res = self.sb.table("checkins").select("pain_stop").order("week_start", desc=True).limit(1).execute()
+        return bool(res.data and res.data[0]["pain_stop"])
+
     def pending(self):
         return (self.sb.table("approvals").select("id, subject_date, plan_version_id")
                 .eq("kind", "watch_workout").is_("sent_at", "null").is_("send_error", "null")
@@ -155,7 +166,7 @@ async def run_job(sb, token: str, mcp_url: str) -> dict:
     db = SupabaseDb(sb)
     now = datetime.now(timezone.utc)
     if not db.pending() and not db.stale(now - STALE_AFTER):
-        return {"sent": 0, "already_there": 0, "failed": 0, "skipped": 0, "flagged": 0}  # nothing to do: do not even connect
+        return {"sent": 0, "already_there": 0, "failed": 0, "skipped": 0, "flagged": 0, "held": 0}  # nothing to do: do not even connect
     client = httpx.AsyncClient(headers={"Authorization": f"Bearer {token}"}, timeout=60)
     async with client, streamable_http_client(mcp_url, http_client=client) as streams:
         async with ClientSession(streams[0], streams[1]) as session:

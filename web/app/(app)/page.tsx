@@ -5,7 +5,7 @@ import { ProgressBar } from "@/components/progress-bar";
 import { StatusBanner } from "@/components/status-banner";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadApprovePage, loadDashboardData } from "@/lib/data";
+import { loadApprovePage, loadDashboardData, loadHomeStatus } from "@/lib/data";
 import { formatKm } from "@/lib/format";
 import { lockedWeeks } from "@/lib/gates";
 import { isRestDay, runLabel } from "@/lib/labels";
@@ -14,9 +14,10 @@ import { matchRunsToDays, weeklySeries } from "@/lib/runs";
 import { currentWeekNumber, todayLondon } from "@/lib/weeks";
 
 export default async function HomePage() {
-  const [{ weeks, days, runs, ankleGatePassed, raceDate, targets }, approve] = await Promise.all([
+  const [{ weeks, days, runs, ankleGatePassed, raceDate, targets }, approve, status] = await Promise.all([
     loadDashboardData(),
     loadApprovePage(7),
+    loadHomeStatus(),
   ]);
   const today = todayLondon();
   const weekNo = currentWeekNumber(weeks, today);
@@ -30,6 +31,19 @@ export default async function HomePage() {
 
   return (
     <>
+      {status.painStopMessage && (
+        <StatusBanner level="stop" title="Your last check in says stop">
+          {status.painStopMessage}{" "}
+          <Link href="/checkin" className="text-foreground underline">Open the check in</Link>
+        </StatusBanner>
+      )}
+
+      {status.checkinDue && (
+        <StatusBanner level="info" title="Time for your weekly check in">
+          <Link href="/checkin" className="text-foreground underline">Open the check in</Link>
+        </StatusBanner>
+      )}
+
       {!ankleGatePassed && (
         <StatusBanner level="careful" title="Week 2 is locked">
           Do the four ankle checks first.{" "}

@@ -11,10 +11,14 @@ NOW = datetime(2026, 11, 3, 12, 0, tzinfo=timezone.utc)
 
 
 class FakeDb:
-    def __init__(self, approvals, runs=None, claim_wins=True):
+    def __init__(self, approvals, runs=None, claim_wins=True, pain_stop=False):
         self.rows = {a["id"]: {"sent_at": None, "send_error": None, "send_started_at": None, "coros_ref": None, **a} for a in approvals}
         self.runs = RUNS if runs is None else runs
         self.claim_wins = claim_wins
+        self.pain_stop = pain_stop
+
+    def pain_stop_active(self):
+        return self.pain_stop
 
     def pending(self):
         return [r for r in self.rows.values() if not r["sent_at"] and not r["send_error"] and not r["send_started_at"]]
@@ -170,14 +174,14 @@ def test_a_recently_started_send_is_left_alone():
 
 def test_nothing_approved_means_nothing_happens():
     coros = FakeCoros()
-    assert run(FakeDb([]), coros) == {"sent": 0, "already_there": 0, "failed": 0, "skipped": 0, "flagged": 0}
+    assert run(FakeDb([]), coros) == {"sent": 0, "already_there": 0, "failed": 0, "skipped": 0, "flagged": 0, "held": 0}
     assert coros.calendar_calls == 0
 
 
 def test_counts_are_all_the_job_reports():
     db, coros = FakeDb([approval(1)]), FakeCoros()
     counts = run(db, coros)
-    assert set(counts) == {"sent", "already_there", "failed", "skipped", "flagged"}
+    assert set(counts) == {"sent", "already_there", "failed", "skipped", "flagged", "held"}
 
 
 def test_a_rest_day_that_slipped_through_is_refused_not_sent():
@@ -185,3 +189,18 @@ def test_a_rest_day_that_slipped_through_is_refused_not_sent():
     db, coros = FakeDb([approval(1, "2026-11-05")]), FakeCoros()
     assert run(db, coros)["failed"] == 1 and coros.created == []
     assert "Could not turn the run" in db.rows["a1"]["send_error"]
+
+
+def test_while_a_pain_stop_is_active_approved_runs_are_held_not_sent_and_not_failed():
+    db, coros = FakeDb([approval(1), approval(2, "2026-11-06")], pain_stop=True), FakeCoros()
+    counts = run(db, coros)
+    assert counts["held"] == 2 and counts["sent"] == 0
+    assert coros.created == [] and coros.calendar_calls == 0
+    assert all(r["send_error"] is None and r["send_started_at"] is None for r in db.rows.values())
+
+
+def test_once_the_stop_is_cleared_the_held_runs_are_sent():
+    db, coros = FakeDb([approval(1)], pain_stop=True), FakeCoros()
+    run(db, coros)
+    db.pain_stop = False
+    assert run(db, coros)["sent"] == 1
