@@ -123,7 +123,19 @@ def get_access_token(sb, http: httpx.Client, now: datetime | None = None) -> str
     if datetime.fromisoformat(row["access_expires_at"]) - now > REFRESH_MARGIN:
         return row["access_token"]
     meta = discover(http, row["mcp_url"])
-    tokens = refresh(http, meta, row["client_id"], row["refresh_token"])
+    try:
+        tokens = refresh(http, meta, row["client_id"], row["refresh_token"])
+    except httpx.HTTPStatusError:
+        # Another job may have refreshed first. COROS kills the old refresh token on every refresh,
+        # so ours is now dead. Look again: if the saved pair is newer and still fresh, use it.
+        latest = load_tokens(sb)
+        if (
+            latest
+            and latest["refresh_token"] != row["refresh_token"]
+            and datetime.fromisoformat(latest["access_expires_at"]) - now > REFRESH_MARGIN
+        ):
+            return latest["access_token"]
+        raise
     new_row = to_row(tokens, row["mcp_url"], row["client_id"], now, old_refresh=row["refresh_token"])
     save_tokens(sb, new_row)
     return new_row["access_token"]

@@ -169,3 +169,11 @@ Alternatives: save the whole workout at the end (loses data if the phone dies mi
 Cost: needs signal to save. With none, the screen says so and keeps what was typed, but there is no offline queue. A ticked set with no numbers is allowed, for bodyweight and mobility moves.
 Revisit when: the gym has bad signal, or Vicky wants progress charts per exercise.
 Status: open
+
+## 2026-11-02 Railway set up by hand in the dashboard, COROS pulled every 15 minutes
+Chose: services are configured in Railway's dashboard and written up in docs/railway.md, not in railway.json files. The COROS run job runs every 15 minutes. If a token refresh is refused, the code re-reads the saved tokens and uses a newer pair if another job already refreshed.
+Why: Railway says railway.json stops working for existing services on 2026-12-01 and its replacement (a TypeScript file) is still experimental. Waiting up to 3 hours to see a finished run felt too long to Vicky. COROS replaces the refresh token on every refresh, so two jobs refreshing together could lock the login. More frequent jobs, and the coming watch job, make that more likely.
+Alternatives: railway.json files, the experimental infrastructure as code, a 5 minute schedule, one shared job.
+Cost: dashboard settings can drift from the notes, so the notes must be kept current. COROS publishes no rate limit for this call, so the job logs are the early warning. A run still only shows after the COROS phone app has synced the watch.
+Revisit when: COROS pushes back with errors, or Railway's replacement is stable.
+Status: open

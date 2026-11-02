@@ -16,7 +16,7 @@ All services deploy from the private GitHub repository, branch `main`.
 ## Service: runs (cron, pulls runs from COROS)
 * Root directory: `/` (repo root)
 * Start command: `python -m ingest.coros_runs --days 7 --apply`
-* Cron schedule: `0 */3 * * *` (every 3 hours, UTC)
+* Cron schedule: `*/15 * * * *` (every 15 minutes, UTC). Railway's smallest allowed interval is 5 minutes. COROS publishes no limit for this call, so watch the logs for errors. A run still only appears after the COROS phone app has synced the watch.
 * Variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `COROS_MCP_URL`
 * The job must exit when finished. It does. It logs counts only, never tokens.
 

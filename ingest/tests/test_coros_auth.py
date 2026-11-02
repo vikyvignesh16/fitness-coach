@@ -135,3 +135,35 @@ def test_expired_refresh_token_asks_for_a_new_login():
 def test_missing_tokens_asks_for_a_first_login():
     with pytest.raises(RuntimeError, match="login"):
         auth.get_access_token(FakeSupabase(), http_returning(lambda r: None), NOW)
+
+
+def test_if_another_job_refreshed_first_we_use_its_tokens():
+    """Two jobs refresh together. The second one's refresh token is dead, but the first saved a new pair."""
+    sb = FakeSupabase(saved_row(access_in_minutes=1))
+    newer = auth.to_row(
+        {"access_token": "other-jobs-access", "refresh_token": "other-jobs-refresh", "expires_in": 2592000},
+        MCP, "client-1", NOW,
+    )
+
+    def handler(request):
+        if request.url.path.endswith("oauth-authorization-server"):
+            return httpx.Response(200, json=META)
+        sb.store["row"] = newer  # the other job saves its new pair while ours is being refused
+        return httpx.Response(400, json={"error": "invalid_grant"})
+
+    token = auth.get_access_token(sb, http_returning(handler), NOW)
+    assert token == "other-jobs-access"
+    assert sb.store["row"]["refresh_token"] == "other-jobs-refresh"  # we did not overwrite it
+
+
+def test_a_refused_refresh_with_nothing_newer_still_raises():
+    sb = FakeSupabase(saved_row(access_in_minutes=1))
+
+    def handler(request):
+        if request.url.path.endswith("oauth-authorization-server"):
+            return httpx.Response(200, json=META)
+        return httpx.Response(400, json={"error": "invalid_grant"})
+
+    with pytest.raises(httpx.HTTPStatusError):
+        auth.get_access_token(sb, http_returning(handler), NOW)
+    assert sb.store["row"]["refresh_token"] == "old-refresh"
