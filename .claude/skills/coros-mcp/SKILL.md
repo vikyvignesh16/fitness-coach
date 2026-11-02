@@ -32,4 +32,8 @@ Facts below were checked against COROS's docs and the live server on 2026-11-02.
 * Dates must be from today to 90 days ahead, one workout per call. A 23 week plan has to go in chunks.
 * There are NO delete tools. A wrong workout can only be removed in the COROS app by Vicky. This is why approval comes first.
 * Strength workouts cannot be created through the MCP. Gym sessions are logged in our own tables (see docs/decisions.md).
-* The `coros_workout` blocks in plan v5.1 are a staging format and are NOT confirmed importable. The `course` format is unverified: read an existing workout with `queryWorkoutDetails` or `queryScheduledWorkoutDetails` and match it before writing the first one.
+* VERIFIED 2026-11-02: `createScheduledWorkout` accepts the `course` built by `ingest/watch_course.to_course()` (sections with sectionType, targetType, targetValue, and pace as intensityType 2 with start and end in seconds per km). Three real workouts (a plain run, a strides session with a repeat group, an easy run) were created and appeared on the calendar.
+* The answer to a successful create contains `idInPlan`, a small counting number per standalone workout (1, 2, 3). `ingest/watch_sync.py` only counts a send as done when it finds it.
+* `queryTrainingSchedule(startDate, endDate)` returns text. Empty: `No training schedule found.` Otherwise each workout shows its name, `idInPlan`, distance, estimated time. The job uses the workout NAME (which carries the date) to spot a workout already on the calendar.
+* COROS adds up only the fixed parts of a workout for distance, so a strides session (strides have no distance) and runs ending in an open cool down show less than the plan's total.
+* The `coros_workout` blocks in plan v5.1 are a staging format, not importable as they are. They are translated by `to_course()`.
