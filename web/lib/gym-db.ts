@@ -1,9 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ANKLE_GATE_ID } from "@/lib/gate-record";
-import { lockedWeeks } from "@/lib/gates";
 import type { GymDb } from "@/lib/gym-save";
-import { gatePassed } from "@/lib/weeks";
+import { isWeekLocked } from "@/lib/lock-db";
 
 /** The real database behind GymDb. Uses the signed in user's session, so row level security applies too. */
 export function createGymDb(supabase: SupabaseClient): GymDb {
@@ -19,12 +17,7 @@ export function createGymDb(supabase: SupabaseClient): GymDb {
       return { week: data.week, session: data.gym.session, exercises: data.gym.key_exercises ?? [] };
     },
 
-    async isWeekLocked(week) {
-      const { data, error } = await supabase
-        .from("approvals").select("passed, created_at").eq("kind", "gate").eq("gate_id", ANKLE_GATE_ID);
-      if (error) throw error;
-      return lockedWeeks(gatePassed(data ?? [])).includes(week);
-    },
+    isWeekLocked: (week) => isWeekLocked(supabase, week),
 
     async upsertSession(date, name) {
       const { data, error } = await supabase

@@ -177,3 +177,11 @@ Alternatives: railway.json files, the experimental infrastructure as code, a 5 m
 Cost: dashboard settings can drift from the notes, so the notes must be kept current. COROS publishes no rate limit for this call, so the job logs are the early warning. A run still only shows after the COROS phone app has synced the watch.
 Revisit when: COROS pushes back with errors, or Railway's replacement is stable.
 Status: open
+
+## 2026-11-02 Watch sending: the web app approves, a separate job sends
+Chose: the Approve runs page only writes an approvals row. A Railway cron job (every 5 minutes, ingest/watch_sync.py) picks up approvals not yet sent, turns the planned run into a COROS workout (ingest/watch_course.py) and sends it. One approval per day is enforced by the database. Before sending, the job claims the approval, checks the COROS calendar for a workout with the same name, and never retries a failed send by itself. A send that stopped part way is flagged for a human. The database blanks the "sent" fields if the web app tries to set them.
+Why: the web app must never hold COROS tokens (CLAUDE.md keeps secrets out of it). COROS has no delete tool, so a duplicate or wrong workout can only be removed by Vicky in the COROS app. Each guard closes one way a double send could happen.
+Alternatives: let the web app call COROS directly (needs tokens in the web service), send straight from the approve button (no queue, no retry control), retry failures automatically (risks duplicates).
+Cost: up to 5 minutes between approving and the watch having it. A failed send needs a human. The format of COROS's success answer was not known, so the job only counts a send as done when it sees a workout id, and otherwise records what COROS said.
+Revisit when: the first real send shows what COROS actually returns, or COROS adds a delete tool.
+Status: open

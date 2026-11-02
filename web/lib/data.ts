@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { londonDate } from "@/lib/runs";
 import { lockedWeeks } from "@/lib/gates";
 import { sessionProgress, type HistorySet, type LoggedSet, type PlannedExercise } from "@/lib/gym";
+import { upcomingRuns, waitingCount, type ApprovalRow, type UpcomingRun } from "@/lib/watch-approve";
 import { currentWeekNumber, gatePassed, todayLondon } from "@/lib/weeks";
 import type { PlanDay, PlanWeek, RunRow } from "@/lib/types";
 
@@ -223,4 +224,28 @@ export async function loadGymSession(date: string): Promise<GymSessionData | nul
     })),
     finished: Boolean(sessionRes.data?.finished_at),
   };
+}
+
+// ---- Approve runs for the watch
+
+export type ApprovePageData = { runs: UpcomingRun[]; waiting: number };
+
+export async function loadApprovePage(horizonDays = 14): Promise<ApprovePageData> {
+  const supabase = await createClient();
+  const today = todayLondon();
+  const { data: version } = await supabase
+    .from("plan_versions").select("id").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!version) throw new Error("Could not read the plan.");
+
+  const [days, approvals, gates] = await Promise.all([
+    supabase.from("plan_days").select("date, week, run, gym").eq("plan_version_id", version.id)
+      .gte("date", today).lte("date", addDaysTo(today, horizonDays - 1)).order("date"),
+    supabase.from("approvals").select("subject_date, sent_at, send_error").eq("kind", "watch_workout").gte("subject_date", today),
+    supabase.from("approvals").select("passed, created_at").eq("kind", "gate").eq("gate_id", ANKLE_GATE_ID),
+  ]);
+  if (days.error || approvals.error || gates.error) throw new Error("Could not read the runs to approve.");
+
+  const locked = lockedWeeks(gatePassed(gates.data ?? []));
+  const runs = upcomingRuns(days.data as PlanDay[], approvals.data as ApprovalRow[], locked, today, horizonDays);
+  return { runs, waiting: waitingCount(runs) };
 }

@@ -5,7 +5,7 @@ import { ProgressBar } from "@/components/progress-bar";
 import { StatusBanner } from "@/components/status-banner";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadDashboardData } from "@/lib/data";
+import { loadApprovePage, loadDashboardData } from "@/lib/data";
 import { formatKm } from "@/lib/format";
 import { lockedWeeks } from "@/lib/gates";
 import { isRestDay, runLabel } from "@/lib/labels";
@@ -14,7 +14,10 @@ import { matchRunsToDays, weeklySeries } from "@/lib/runs";
 import { currentWeekNumber, todayLondon } from "@/lib/weeks";
 
 export default async function HomePage() {
-  const { weeks, days, runs, ankleGatePassed, raceDate, targets } = await loadDashboardData();
+  const [{ weeks, days, runs, ankleGatePassed, raceDate, targets }, approve] = await Promise.all([
+    loadDashboardData(),
+    loadApprovePage(7),
+  ]);
   const today = todayLondon();
   const weekNo = currentWeekNumber(weeks, today);
   const week = weeks.find((w) => w.week === weekNo)!;
@@ -31,6 +34,12 @@ export default async function HomePage() {
         <StatusBanner level="careful" title="Week 2 is locked">
           Do the four ankle checks first.{" "}
           <Link href="/gates/ankle" className="text-foreground underline">Open the ankle check</Link>
+        </StatusBanner>
+      )}
+
+      {approve.waiting > 0 && (
+        <StatusBanner level="info" title={`${approve.waiting} ${approve.waiting === 1 ? "run is" : "runs are"} waiting for approval`}>
+          <Link href="/approve" className="text-foreground underline">Approve runs for your watch</Link>
         </StatusBanner>
       )}
 

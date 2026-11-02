@@ -7,6 +7,7 @@ export const TABS = [
 ] as const;
 
 export const MENU_LINKS = [
+  { href: "/approve", label: "Approve runs" },
   { href: "/plan", label: "Training plan" },
   { href: "/checkin", label: "Weekly check in" },
   { href: "/gates/ankle", label: "Ankle check" },
