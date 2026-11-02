@@ -103,6 +103,14 @@ describe("ExerciseCard", () => {
     expect(screen.getByRole("button", { name: "Set 1 done" })).toBeDisabled();
     expect(screen.getByLabelText("Set 1 reps")).toBeDisabled();
     expect(save).not.toHaveBeenCalled();
+    // and it says why, with a way to fix it
+    expect(screen.getByText("Locked until the ankle check is passed.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Do the check" })).toHaveAttribute("href", "/gates/ankle");
+  });
+
+  it("shows no lock message when the week is open", () => {
+    setup();
+    expect(screen.queryByText(/Locked until/)).toBeNull();
   });
 
   it("does not save a typed value until it is ticked", async () => {

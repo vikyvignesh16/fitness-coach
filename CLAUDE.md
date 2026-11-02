@@ -55,6 +55,9 @@ Fill these in as the project grows. Keep them current.
 * Apply database migrations: `supabase db push --remote --dry-run`, then `supabase db push --remote --yes`. Always pass `--remote`, because the CLI defaults to a local database.
 * Read only SQL against the live database: `supabase db query --remote --read-only "select ..."`
 * Import plan (dry run, then write): `uv run --python 3.12 python -m ingest.import_plan` and add `--apply`. It refuses to run twice.
+* COROS first login (once, on Vicky's own computer, opens a browser): `uv run --python 3.12 python -m ingest.coros_login`. Details in the coros-mcp skill.
+* Pull runs from COROS (dry run, then save, safe to repeat): `uv run --python 3.12 python -m ingest.coros_runs --days 14` and add `--apply`.
+* Note: the Supabase CLI refuses write SQL on the live project unless Vicky agrees, so ask before using `db query` without `--read-only`.
 * Supabase project ref: jmandamylkmejkgosqvg (eu-west-1). v5.1 is imported as plan_versions id a3204de5-db42-484a-86a9-558344b3eae7.
 
 ## Repo layout (target)

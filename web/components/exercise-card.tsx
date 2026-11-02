@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Plus } from "lucide-react";
+import { Check, Lock, Plus } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { saveSetAction } from "@/app/(app)/gym/actions";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +80,15 @@ export function ExerciseCard({
       </summary>
 
       <div className="space-y-3 px-4 pb-4">
+        {disabled && (
+          <div role="status" className="bg-muted flex items-center gap-3 rounded-lg p-3 text-sm">
+            <Lock aria-hidden className="size-4 shrink-0" />
+            <p className="flex-1">Locked until the ankle check is passed.</p>
+            <Link href="/gates/ankle" className="text-foreground flex min-h-11 items-center font-medium underline">
+              Do the check
+            </Link>
+          </div>
+        )}
         <div className="text-muted-foreground space-y-0.5 text-sm">
           <p>{planLine(exercise)}</p>
           {last && <p>Last time: {formatLoad(last.loadKg)}{last.reps != null && <> x {last.reps}</>}</p>}
