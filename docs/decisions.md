@@ -193,3 +193,10 @@ Alternatives: only show a warning on a stop, send photos through a server action
 Cost: a stop also holds runs Vicky already approved, so she must do a clean check in, or see a professional, to release them. The pain rules exist twice (Python and TypeScript), kept in step by a test that reads the Python file. The weekend reminder (Saturday and Sunday) is a guess, because the plan does not say which day the check in is.
 Revisit when: Vicky says which day she does the check in, or a stop should not hold approved runs.
 Status: open
+
+## 2026-11-03: COROS writes short distances in metres
+
+**What happened:** The scheduled runs job crashed with "A COROS run is missing a field I need". One activity on 29 Oct was 792 m. COROS wrote "Distance: 792 m" instead of "0.79 km", and the parser only knew km.
+**Choice:** The parser now accepts km or m and stores kilometres. I kept the loud failure for a truly missing field, because a silent skip could hide a real format change.
+**Alternatives:** Skip runs the parser cannot read (rejected: quiet data loss). Ignore anything under 1 km (rejected: hides data, and the rule belongs to Vicky, not the parser).
+**Note:** That activity is a 24 minute walk at 30:47 per km that the watch labelled as an outdoor run. It is saved like any other run.

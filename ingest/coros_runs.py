@@ -46,7 +46,7 @@ def parse_sport_records(text: str) -> list[dict]:
         if not sport or int(sport.group(1)) not in RUN_CODES:
             continue
         start = re.search(r"startTimestamp=(\d+)", block)
-        distance = re.search(r"Distance: ([\d.]+) km", block)
+        distance = re.search(r"Distance: ([\d.]+) (km|m)\b", block)  # short ones come as metres
         duration = re.search(r"Duration: ([\d:]+)", block)
         label = re.search(r"LabelId: (\d+)", block)
         if not (start and distance and duration and label):
@@ -55,7 +55,7 @@ def parse_sport_records(text: str) -> list[dict]:
         runs.append({
             "coros_id": label.group(1),
             "started_at": datetime.fromtimestamp(int(start.group(1)), timezone.utc).isoformat(),
-            "distance_km": float(distance.group(1)),
+            "distance_km": float(distance.group(1)) / (1000 if distance.group(2) == "m" else 1),
             "duration_s": to_seconds(duration.group(1)),
             "avg_hr": int(hr.group(1)) if hr else None,
             "raw": {"sport_type": int(sport.group(1)), "text": block.strip()},

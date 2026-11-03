@@ -77,6 +77,25 @@ def test_missing_required_field_raises():
         parse_sport_records(broken)
 
 
+SHORT = """Sport Records — 2026-10-29 to 2026-11-03 (1 records)
+========================
+
+1. Outdoor Run — 2026-10-29
+   Location: London Run
+   Start Coordinates: 51.508999, -0.063000
+   Time Window: startTimestamp=1793301607 | endTimestamp=1793303088
+   Duration: 24:22 | Distance: 792 m
+   Average Pace: 30:47 /km | Calories: 71 kcal
+   LabelId: 481481574748029028 | SportType: 100
+"""
+
+
+def test_distance_under_a_km_comes_in_metres():
+    # COROS writes "792 m" for short activities, "8.01 km" for longer ones.
+    runs = parse_sport_records(SHORT)
+    assert runs[0]["distance_km"] == 0.792
+
+
 def test_zero_records_is_fine():
     assert parse_sport_records("Sport Records — a to b (0 records)\n") == []
 
