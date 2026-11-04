@@ -8,6 +8,7 @@ export const TABS = [
 
 export const MENU_LINKS = [
   { href: "/approve", label: "Approve runs" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/plan", label: "Training plan" },
   { href: "/checkin", label: "Weekly check in" },
   { href: "/gates/ankle", label: "Ankle check" },
@@ -16,5 +17,6 @@ export const MENU_LINKS = [
 /** Home is only active on "/". Other tabs stay active on their sub pages, like /runs/abc. */
 export function isActiveTab(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
+  if (href === "/runs" && (pathname === "/calendar" || pathname.startsWith("/calendar/"))) return true; // the calendar belongs to Runs
   return pathname === href || pathname.startsWith(href + "/");
 }

@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { BigStat } from "@/components/big-stat";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +16,12 @@ export default async function RunsPage(props: PageProps<"/runs">) {
 
   return (
     <>
-      <h1 className="text-xl font-semibold">Runs</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Runs</h1>
+        <Link href="/calendar" className="text-muted-foreground flex min-h-11 items-center gap-1 text-sm">
+          <CalendarDays aria-hidden className="size-4" /> Calendar
+        </Link>
+      </div>
 
       <nav aria-label="Time range" className="bg-muted grid grid-cols-3 gap-1 rounded-lg p-1">
         {RANGES.map((r) => (

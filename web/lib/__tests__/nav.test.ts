@@ -14,8 +14,14 @@ describe("isActiveTab", () => {
     expect(isActiveTab("/runs/481362696762064996", "/runs")).toBe(true);
   });
 
+  it("lights Runs on the calendar, which is another view of the runs", () => {
+    expect(isActiveTab("/calendar", "/runs")).toBe(true);
+    expect(isActiveTab("/calendar", "/")).toBe(false);
+  });
+
   it("does not light a tab for a look-alike path", () => {
     expect(isActiveTab("/runsheet", "/runs")).toBe(false);
+    expect(isActiveTab("/calendarx", "/runs")).toBe(false);
     expect(isActiveTab("/plan", "/runs")).toBe(false);
   });
 });

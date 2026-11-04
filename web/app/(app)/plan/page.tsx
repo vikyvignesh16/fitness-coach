@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DayRow } from "@/components/day-row";
 import { Badge } from "@/components/ui/badge";
 import { loadDashboardData } from "@/lib/data";
@@ -18,7 +19,10 @@ export default async function PlanPage() {
     <>
       <div>
         <h1 className="text-xl font-semibold">Plan v{version}</h1>
-        <p className="text-muted-foreground text-sm">Paris Marathon, Sunday 4 April 2027. Read only.</p>
+        <p className="text-muted-foreground text-sm">
+          Paris Marathon, Sunday 4 April 2027. Read only. Tap a day for the workout, or{" "}
+          <Link href="/calendar" className="underline">see the calendar</Link>.
+        </p>
       </div>
       <div className="space-y-2">
         {weeks.map((w) => {
