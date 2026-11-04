@@ -58,15 +58,15 @@ describe("filterRuns", () => {
     expect(filterRuns(runs, "all", "2026-11-04").map((r) => r.coros_id)).toEqual(["wed", "mon", "last-sun", "old"]);
   });
 
-  it("uses London days: just after London midnight on Monday counts for the new week", () => {
-    // 23:30 UTC on Sunday 6 June is 00:30 BST on Monday 7 June in London
-    const justAfter = [run("a", "2027-06-06T23:30:00+00:00", 5)];
+  it("uses Paris days: just after Paris midnight on Monday counts for the new week", () => {
+    // 22:30 UTC on Sunday 6 June is 00:30 CEST on Monday 7 June in Paris
+    const justAfter = [run("a", "2027-06-06T22:30:00+00:00", 5)];
     expect(filterRuns(justAfter, "week", "2027-06-07")).toHaveLength(1);
   });
 
-  it("uses London days: just before London midnight on Sunday is still last week", () => {
-    // 22:30 UTC on Sunday 6 June is 23:30 BST the same Sunday
-    const justBefore = [run("b", "2027-06-06T22:30:00+00:00", 5)];
+  it("uses Paris days: just before Paris midnight on Sunday is still last week", () => {
+    // 21:30 UTC on Sunday 6 June is 23:30 CEST the same Sunday
+    const justBefore = [run("b", "2027-06-06T21:30:00+00:00", 5)];
     expect(filterRuns(justBefore, "week", "2027-06-07")).toHaveLength(0);
   });
 

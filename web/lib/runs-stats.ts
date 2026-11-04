@@ -1,4 +1,4 @@
-import { londonDate } from "./runs";
+import { localDate } from "./runs";
 import type { RunRow } from "./types";
 import { mondayOf } from "./weeks";
 
@@ -16,7 +16,7 @@ export function parseRange(value: string | string[] | undefined): Range {
   return v === "week" || v === "month" || v === "all" ? v : "month";
 }
 
-/** First London day included in the range, or null for all time. Weeks run Monday to Sunday. */
+/** First home zone day included in the range, or null for all time. Weeks run Monday to Sunday. */
 export function rangeStart(range: Range, today: string): string | null {
   if (range === "week") return mondayOf(today);
   if (range === "month") return `${today.slice(0, 7)}-01`;
@@ -26,7 +26,7 @@ export function rangeStart(range: Range, today: string): string | null {
 export function filterRuns(runs: RunRow[], range: Range, today: string): RunRow[] {
   const start = rangeStart(range, today);
   return runs
-    .filter((r) => start === null || londonDate(r.started_at) >= start)
+    .filter((r) => start === null || localDate(r.started_at) >= start)
     .sort((a, b) => b.started_at.localeCompare(a.started_at));
 }
 

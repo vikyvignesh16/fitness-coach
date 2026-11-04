@@ -1,10 +1,11 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { londonDate } from "@/lib/runs";
+import { localDate } from "@/lib/runs";
 import { lockedWeeks } from "@/lib/gates";
 import { sessionProgress, type HistorySet, type LoggedSet, type PlannedExercise } from "@/lib/gym";
-import { upcomingRuns, waitingCount, type ApprovalRow, type UpcomingRun } from "@/lib/watch-approve";
-import { checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLondon } from "@/lib/weeks";
+import { isRestDay } from "@/lib/labels";
+import { runState, upcomingRuns, waitingCount, type ApprovalRow, type RunState, type UpcomingRun } from "@/lib/watch-approve";
+import { checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLocal } from "@/lib/weeks";
 import type { PlanDay, PlanWeek, RunRow } from "@/lib/types";
 
 import { ANKLE_GATE_ID } from "@/lib/gate-record";
@@ -68,7 +69,7 @@ export async function loadRuns(): Promise<RunRow[]> {
 
 export type RunDetail = {
   run: RunRow & { raw: unknown };
-  plannedDay: PlanDay | null; // what the plan said for that London day
+  plannedDay: PlanDay | null; // what the plan said for that home zone day
   dayRuns: RunRow[]; // every run that day, since planned km is for the whole day
 };
 
@@ -83,7 +84,7 @@ export async function loadRunDetail(corosId: string): Promise<RunDetail | null> 
   if (error) throw new Error(`Could not read the run: ${error.message}`);
   if (!run) return null;
 
-  const date = londonDate(run.started_at);
+  const date = localDate(run.started_at);
   const { data: version } = await supabase
     .from("plan_versions")
     .select("id")
@@ -102,7 +103,7 @@ export async function loadRunDetail(corosId: string): Promise<RunDetail | null> 
   return {
     run: run as RunDetail["run"],
     plannedDay: (plan.data as PlanDay | null) ?? null,
-    dayRuns: (all.data as RunRow[]).filter((r) => londonDate(r.started_at) === date),
+    dayRuns: (all.data as RunRow[]).filter((r) => localDate(r.started_at) === date),
   };
 }
 
@@ -141,7 +142,7 @@ export async function loadGymWeek(requestedWeek: number | null): Promise<GymWeek
   if (gates.error) throw new Error("Could not read the ankle check.");
 
   const weeks = (weeksRes.data as PlanWeek[]).filter((w) => w.phase !== "Actual");
-  const fallback = Math.max(currentWeekNumber(weeksRes.data as PlanWeek[], todayLondon()), weeks[0].week);
+  const fallback = Math.max(currentWeekNumber(weeksRes.data as PlanWeek[], todayLocal()), weeks[0].week);
   const week = weeks.find((w) => w.week === requestedWeek) ?? weeks.find((w) => w.week === fallback) ?? weeks[0];
   const locked = lockedWeeks(gatePassed(gates.data ?? [])).includes(week.week);
 
@@ -226,13 +227,50 @@ export async function loadGymSession(date: string): Promise<GymSessionData | nul
   };
 }
 
+// ---- One planned day
+
+export type PlanDayPage = {
+  day: PlanDay;
+  locked: boolean;
+  doneRuns: RunRow[]; // runs the watch recorded on that day
+  watch: { state: RunState; error: string | null } | null; // null when nothing is planned
+};
+
+/** One plan day with what was done and where it is on the watch. Null if the date is not in the plan. */
+export async function loadPlanDay(date: string): Promise<PlanDayPage | null> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const supabase = await createClient();
+  const { data: version } = await supabase
+    .from("plan_versions").select("id").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!version) return null;
+
+  const [dayRes, gates, approval, runs] = await Promise.all([
+    supabase.from("plan_days").select("date, week, run, gym").eq("plan_version_id", version.id).eq("date", date).maybeSingle(),
+    supabase.from("approvals").select("passed, created_at").eq("kind", "gate").eq("gate_id", ANKLE_GATE_ID),
+    supabase.from("approvals").select("subject_date, sent_at, send_error").eq("kind", "watch_workout").eq("subject_date", date).maybeSingle(),
+    supabase.from("runs").select("coros_id, started_at, distance_km, duration_s, avg_hr").order("started_at"),
+  ]);
+  if (dayRes.error || gates.error || approval.error || runs.error) throw new Error("Could not read that day.");
+  if (!dayRes.data) return null;
+
+  const day = dayRes.data as PlanDay;
+  const hasRun = !isRestDay(day.run?.type);
+  const row = (approval.data as ApprovalRow | null) ?? undefined;
+  return {
+    day,
+    locked: lockedWeeks(gatePassed(gates.data ?? [])).includes(day.week),
+    doneRuns: (runs.data as RunRow[]).filter((r) => localDate(r.started_at) === date),
+    watch: hasRun ? { state: runState(row), error: row?.send_error ?? null } : null,
+  };
+}
+
 // ---- Approve runs for the watch
 
 export type ApprovePageData = { runs: UpcomingRun[]; waiting: number };
 
 export async function loadApprovePage(horizonDays = 14): Promise<ApprovePageData> {
   const supabase = await createClient();
-  const today = todayLondon();
+  const today = todayLocal();
   const { data: version } = await supabase
     .from("plan_versions").select("id").order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (!version) throw new Error("Could not read the plan.");
@@ -282,7 +320,7 @@ export async function loadCheckinPage(): Promise<CheckinPageData> {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("Not signed in.");
-  const weekStart = mondayOf(todayLondon());
+  const weekStart = mondayOf(todayLocal());
 
   const { data, error } = await supabase
     .from("checkins")
@@ -318,7 +356,7 @@ export async function loadCheckinPage(): Promise<CheckinPageData> {
 
 export async function loadHomeStatus(): Promise<{ painStopMessage: string | null; checkinDue: boolean }> {
   const supabase = await createClient();
-  const today = todayLondon();
+  const today = todayLocal();
   const { data, error } = await supabase
     .from("checkins").select("week_start, pain_stop, pain_stop_message").order("week_start", { ascending: false }).limit(1);
   if (error) throw new Error("Could not read your check ins.");

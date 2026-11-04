@@ -24,7 +24,7 @@ from ingest.watch_course import CourseError, to_course
 
 MAX_DAYS_AHEAD = 90
 STALE_AFTER = timedelta(minutes=15)
-LONDON = ZoneInfo("Europe/London")
+HOME_ZONE = ZoneInfo("Europe/Paris")
 _ID = re.compile(r"idInPlan\W{0,6}(\d+)")
 
 
@@ -43,8 +43,8 @@ class Coros(Protocol):
     async def create_scheduled(self, day: str, course: dict) -> tuple[bool, str]: ...  # (is_error, text)
 
 
-def london_today(now: datetime) -> date:
-    return now.astimezone(LONDON).date()
+def home_today(now: datetime) -> date:
+    return now.astimezone(HOME_ZONE).date()
 
 
 def _ymd(day: str) -> str:
@@ -65,7 +65,7 @@ async def send_pending(db: Db, coros: Coros, now: datetime) -> dict:
         counts["held"] = len(pending)
         return counts
 
-    today = london_today(now)
+    today = home_today(now)
     for row in pending:
         if not db.claim(row["id"], now):
             counts["skipped"] += 1  # another run got it first

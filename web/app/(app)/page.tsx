@@ -11,7 +11,7 @@ import { lockedWeeks } from "@/lib/gates";
 import { isRestDay, runLabel } from "@/lib/labels";
 import { daysToRace, formatGoalTime } from "@/lib/race";
 import { matchRunsToDays, weeklySeries } from "@/lib/runs";
-import { currentWeekNumber, todayLondon } from "@/lib/weeks";
+import { currentWeekNumber, todayLocal } from "@/lib/weeks";
 
 export default async function HomePage() {
   const [{ weeks, days, runs, ankleGatePassed, raceDate, targets }, approve, status] = await Promise.all([
@@ -19,7 +19,7 @@ export default async function HomePage() {
     loadApprovePage(7),
     loadHomeStatus(),
   ]);
-  const today = todayLondon();
+  const today = todayLocal();
   const weekNo = currentWeekNumber(weeks, today);
   const week = weeks.find((w) => w.week === weekNo)!;
   const locked = lockedWeeks(ankleGatePassed).includes(weekNo);

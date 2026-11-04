@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkinDue, currentWeekNumber, dayMonth, gatePassed, todayLondon, weekdayShort } from "../weeks";
+import { checkinDue, currentWeekNumber, dayMonth, gatePassed, todayLocal, weekdayShort } from "../weeks";
 import { isRestDay, runLabel } from "../labels";
 import type { PlanWeek } from "../types";
 
@@ -31,9 +31,10 @@ describe("currentWeekNumber", () => {
 });
 
 describe("dates", () => {
-  it("gives London's date, not UTC's, late on a summer evening", () => {
-    expect(todayLondon(new Date("2027-07-01T23:30:00Z"))).toBe("2027-07-02");
-    expect(todayLondon(new Date("2026-11-02T23:30:00Z"))).toBe("2026-11-02");
+  it("gives Paris's date, not UTC's, late in the evening", () => {
+    expect(todayLocal(new Date("2027-07-01T22:30:00Z"))).toBe("2027-07-02"); // summer, +2
+    expect(todayLocal(new Date("2026-11-02T22:30:00Z"))).toBe("2026-11-02"); // winter, 23:30
+    expect(todayLocal(new Date("2026-11-02T23:30:00Z"))).toBe("2026-11-03"); // winter, 00:30
   });
 
   it("names the weekday and day and month without timezone drift", () => {

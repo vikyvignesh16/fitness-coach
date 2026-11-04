@@ -130,13 +130,13 @@ Cost: two copies to keep in step. The test catches a difference in ids and messa
 Revisit when: the coach service exists on Railway, then the web app can call it.
 Status: open
 
-## 2026-11-02 Dashboard days follow London time
-Chose: a run belongs to the London calendar day it started on, using Europe/London, not the UTC date.
-Why: COROS stores UTC. In summer a run at 00:30 London time is 23:30 UTC the day before, and would land on the wrong planned day.
-Alternatives: the UTC date, or the phone's local time.
-Cost: wrong if Vicky trains abroad. Tests cover the summer and clock change cases.
-Revisit when: Vicky travels for a race.
-Status: confirmed
+## 2026-11-02 Dashboard days follow home time (changed 2026-11-04: Paris, not London)
+Chose: a run belongs to the calendar day it started on in Vicky's home time zone, Europe/Paris, not the UTC date. One constant, HOME_TIME_ZONE in web/lib/weeks.ts, and HOME_ZONE in ingest/watch_sync.py.
+Why: COROS stores UTC. Late in the evening the Paris date is already the next day, and a run would land on the wrong planned day.
+Correction: I first used London because COROS names activities "London Run". Vicky lives in Paris, so that was a wrong guess. Paris is one hour ahead of London all year, so only runs and approvals between about 22:00 and 24:00 UTC change day.
+Known limit: when Vicky travels, a run is still placed by Paris time. A late evening run in a far zone could land on the next day. COROS gives start coordinates, so a later step can work out the real local date.
+Alternatives: store the zone per run from the coordinates (more accurate, more work, not needed yet).
+
 
 ## 2026-11-02 Chart colours and PWA without a service worker
 Chose: the weekly chart uses blue for planned and orange for done, the first two slots of the validated dataviz palette, checked in light and dark (colour separation 25 against a target of 8). It has a legend, a hover readout and a table view. The app installs on the iPhone through a manifest and icons only, with no service worker.

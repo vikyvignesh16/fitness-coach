@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { buildAnkleGateRecord, parseAnkleAnswers } from "@/lib/gate-record";
 import { createClient } from "@/lib/supabase/server";
-import { todayLondon } from "@/lib/weeks";
+import { todayLocal } from "@/lib/weeks";
 
 export type GateState = { error: string | null; passed: boolean | null; message: string | null };
 
@@ -20,7 +20,7 @@ export async function submitAnkleGate(_prev: GateState, formData: FormData): Pro
     .maybeSingle();
   if (versionError || !version) return { error: "Could not find the plan. Nothing was saved.", passed: null, message: null };
 
-  const record = buildAnkleGateRecord(answers, version.id, todayLondon());
+  const record = buildAnkleGateRecord(answers, version.id, todayLocal());
   const { error } = await supabase.from("approvals").insert(record);
   if (error) return { error: "Could not save your answers. Nothing was changed.", passed: null, message: null };
 

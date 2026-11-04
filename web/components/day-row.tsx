@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatDuration, formatKm, formatPace } from "@/lib/format";
 import { isRestDay, runLabel } from "@/lib/labels";
@@ -21,9 +22,10 @@ export function DayRow({
 
   return (
     <li
-      className={`flex gap-3 border-b py-3 last:border-b-0 ${today ? "bg-muted/50 -mx-4 px-4" : ""}`}
+      className={`border-b last:border-b-0 ${today ? "bg-muted/50 -mx-4 px-4" : ""}`}
       aria-current={today ? "date" : undefined}
     >
+      <Link href={`/plan/${day.date}`} className="flex gap-3 py-3">
       <div className="w-14 shrink-0">
         <div className="font-medium">{weekdayShort(day.date)}</div>
         <div className="text-muted-foreground text-xs">{dayMonth(day.date)}</div>
@@ -54,6 +56,7 @@ export function DayRow({
           </>
         )}
       </div>
+      </Link>
     </li>
   );
 }

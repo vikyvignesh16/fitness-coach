@@ -4,12 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createCheckinDb } from "@/lib/checkin-db";
 import { saveCheckin, type CheckinInput, type CheckinResult } from "@/lib/checkin-save";
 import { createClient } from "@/lib/supabase/server";
-import { mondayOf, todayLondon } from "@/lib/weeks";
+import { mondayOf, todayLocal } from "@/lib/weeks";
 
 /** Save this week's check in. All the checking, including the pain stop, happens in saveCheckin. */
 export async function saveCheckinAction(input: CheckinInput): Promise<CheckinResult> {
   const db = createCheckinDb(await createClient());
-  const result = await saveCheckin(db, mondayOf(todayLondon()), {
+  const result = await saveCheckin(db, mondayOf(todayLocal()), {
     weightKg: String(input?.weightKg ?? ""),
     heightCm: String(input?.heightCm ?? ""),
     feeling: String(input?.feeling ?? ""),

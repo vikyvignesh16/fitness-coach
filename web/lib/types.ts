@@ -1,11 +1,33 @@
 // Row shapes from Supabase (see supabase/migrations/). Only the columns the dashboard reads.
 
+/** One part of a repeat block: the hard bit or the recovery bit. Only some fields are set per step. */
+export type PlanStepPart = {
+  distance_km?: number;
+  duration_min?: number;
+  duration_sec?: number;
+  pace_min_per_km?: string;
+  effort?: string;
+};
+
+export type PlanStep = {
+  step: string; // run, warm_up, repeats, cool_down
+  distance_km?: number;
+  duration_min?: number | string; // a cool down can say "until planned total distance"
+  pace_min_per_km?: string;
+  effort?: string;
+  instruction?: string;
+  repetitions?: number;
+  work?: PlanStepPart;
+  recovery?: PlanStepPart | null;
+};
+
 export type PlanRun = {
   type: string;
   distance_km: number;
   duration_min?: number;
   pace_or_effort?: string;
   notes?: string;
+  steps?: PlanStep[];
 };
 
 export type PlanGym = {

@@ -149,11 +149,11 @@ def test_the_90th_day_is_allowed():
     assert run(db, coros)["sent"] == 1
 
 
-def test_london_date_decides_today_in_summer():
-    # 23:30 UTC on 1 July is already 2 July in London
-    late = datetime(2027, 7, 1, 23, 30, tzinfo=timezone.utc)
+def test_home_date_decides_today_in_summer():
+    # 22:30 UTC on 1 July is already 2 July in Paris
+    late = datetime(2027, 7, 1, 22, 30, tzinfo=timezone.utc)
     db, coros = FakeDb([approval(1, "2027-07-01")]), FakeCoros()
-    assert run(db, coros, now=late)["failed"] == 1  # 1 July has passed in London
+    assert run(db, coros, now=late)["failed"] == 1  # 1 July has passed in Paris
 
 
 def test_a_send_that_stopped_part_way_is_flagged_not_resent():

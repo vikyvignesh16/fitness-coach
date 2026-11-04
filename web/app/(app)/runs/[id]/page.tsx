@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { loadRunDetail } from "@/lib/data";
 import { formatDuration, formatKm, formatPace } from "@/lib/format";
 import { isRestDay, runLabel } from "@/lib/labels";
-import { londonDate, matchRunsToDays, plannedKm } from "@/lib/runs";
+import { localDate, matchRunsToDays, plannedKm } from "@/lib/runs";
 import { caloriesFrom } from "@/lib/runs-stats";
 import { dayMonth, weekdayShort } from "@/lib/weeks";
 
@@ -16,7 +16,7 @@ export default async function RunDetailPage(props: PageProps<"/runs/[id]">) {
   if (!detail) notFound();
 
   const { run, plannedDay, dayRuns } = detail;
-  const date = londonDate(run.started_at);
+  const date = localDate(run.started_at);
   const calories = caloriesFrom(run.raw);
   const planned = plannedDay ? plannedKm(plannedDay) : 0;
   const doneThatDay = matchRunsToDays(dayRuns)[date]?.distanceKm ?? run.distance_km;
@@ -42,7 +42,12 @@ export default async function RunDetailPage(props: PageProps<"/runs/[id]">) {
       <Card>
         <CardHeader>
           <CardTitle>Planned and done</CardTitle>
-          <CardDescription>What the plan said for {weekdayShort(date)} {dayMonth(date)}.</CardDescription>
+          <CardDescription>
+            What the plan said for {weekdayShort(date)} {dayMonth(date)}.{" "}
+            {plannedDay && !isRestDay(plannedDay.run?.type) && (
+              <Link href={`/plan/${date}`} className="underline">See the workout</Link>
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
           {!plannedDay || isRestDay(plannedDay.run?.type) ? (

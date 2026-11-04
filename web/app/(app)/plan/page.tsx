@@ -4,11 +4,11 @@ import { loadDashboardData } from "@/lib/data";
 import { formatKm } from "@/lib/format";
 import { lockedWeeks } from "@/lib/gates";
 import { matchRunsToDays, weeklySeries } from "@/lib/runs";
-import { currentWeekNumber, dayMonth, todayLondon } from "@/lib/weeks";
+import { currentWeekNumber, dayMonth, todayLocal } from "@/lib/weeks";
 
 export default async function PlanPage() {
   const { version, weeks, days, runs, ankleGatePassed } = await loadDashboardData();
-  const today = todayLondon();
+  const today = todayLocal();
   const current = currentWeekNumber(weeks, today);
   const locks = lockedWeeks(ankleGatePassed);
   const actual = matchRunsToDays(runs);

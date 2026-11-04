@@ -4,13 +4,13 @@ import { BigStat } from "@/components/big-stat";
 import { Card, CardContent } from "@/components/ui/card";
 import { loadRuns } from "@/lib/data";
 import { formatDuration, formatKm, formatPace } from "@/lib/format";
-import { londonDate } from "@/lib/runs";
+import { localDate } from "@/lib/runs";
 import { filterRuns, parseRange, RANGES, summarise } from "@/lib/runs-stats";
-import { dayMonth, todayLondon, weekdayShort } from "@/lib/weeks";
+import { dayMonth, todayLocal, weekdayShort } from "@/lib/weeks";
 
 export default async function RunsPage(props: PageProps<"/runs">) {
   const range = parseRange((await props.searchParams).range);
-  const today = todayLondon();
+  const today = todayLocal();
   const runs = filterRuns(await loadRuns(), range, today);
   const totals = summarise(runs);
 
@@ -44,7 +44,7 @@ export default async function RunsPage(props: PageProps<"/runs">) {
       ) : (
         <ul className="space-y-2">
           {runs.map((r) => {
-            const date = londonDate(r.started_at);
+            const date = localDate(r.started_at);
             return (
               <li key={r.coros_id}>
                 <Link href={`/runs/${r.coros_id}`} className="block">

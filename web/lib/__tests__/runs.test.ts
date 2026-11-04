@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { londonDate, matchRunsToDays, plannedKm, weeklySeries } from "../runs";
+import { localDate, matchRunsToDays, plannedKm, weeklySeries } from "../runs";
 import type { PlanDay, PlanWeek, RunRow } from "../types";
 
 const run = (id: string, startedAt: string, km: number, s: number, hr: number | null = 150): RunRow => ({
@@ -10,19 +10,22 @@ const day = (date: string, week: number, type: string, km: number): PlanDay => (
   date, week, run: { type, distance_km: km }, gym: null,
 });
 
-describe("londonDate", () => {
-  it("uses the UTC date in winter (GMT)", () => {
-    expect(londonDate("2026-10-28T06:03:17+00:00")).toBe("2026-10-28");
-    expect(londonDate("2026-12-01T23:30:00+00:00")).toBe("2026-12-01");
+describe("localDate", () => {
+  it("is one hour ahead of UTC in winter (CET)", () => {
+    expect(localDate("2026-10-28T06:03:17+00:00")).toBe("2026-10-28");
+    expect(localDate("2026-12-01T22:30:00+00:00")).toBe("2026-12-01"); // 23:30 in Paris
+    expect(localDate("2026-12-01T23:30:00+00:00")).toBe("2026-12-02"); // 00:30 in Paris
   });
 
-  it("moves a late UTC evening run to the next London day in summer (BST)", () => {
-    expect(londonDate("2027-07-01T23:30:00+00:00")).toBe("2027-07-02");
+  it("is two hours ahead of UTC in summer (CEST)", () => {
+    expect(localDate("2027-07-01T21:30:00+00:00")).toBe("2027-07-01"); // 23:30 in Paris
+    expect(localDate("2027-07-01T22:30:00+00:00")).toBe("2027-07-02"); // 00:30 in Paris
   });
 
   it("handles the clock change day (clocks go back on 25 Oct 2026)", () => {
-    expect(londonDate("2026-10-25T00:30:00+00:00")).toBe("2026-10-25"); // 01:30 BST
-    expect(londonDate("2026-10-25T23:30:00+00:00")).toBe("2026-10-25"); // 23:30 GMT
+    expect(localDate("2026-10-24T22:30:00+00:00")).toBe("2026-10-25"); // 00:30 CEST
+    expect(localDate("2026-10-25T22:30:00+00:00")).toBe("2026-10-25"); // 23:30 CET
+    expect(localDate("2026-10-25T23:30:00+00:00")).toBe("2026-10-26"); // 00:30 CET
   });
 });
 

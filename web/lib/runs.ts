@@ -1,11 +1,12 @@
+import { HOME_TIME_ZONE } from "./weeks";
 import type { DayActual, PlanDay, PlanWeek, RunRow, WeekPoint } from "./types";
 
 const NO_RUN_TYPES = new Set(["no_run", "not_recorded"]);
 
-/** The calendar day in London for a UTC timestamp. The plan is written in London days. */
-export function londonDate(isoTimestamp: string): string {
+/** The calendar day in the home time zone for a UTC timestamp. The plan is written in plain dates. */
+export function localDate(isoTimestamp: string): string {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/London",
+    timeZone: HOME_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -18,12 +19,12 @@ export function plannedKm(day: PlanDay): number {
   return run.distance_km ?? 0;
 }
 
-/** Group watch runs by London day. Several runs on one day add up. */
+/** Group watch runs by home time zone day. Several runs on one day add up. */
 export function matchRunsToDays(runs: RunRow[]): Record<string, DayActual> {
   const out: Record<string, DayActual> = {};
   const hrWeight: Record<string, { sum: number; seconds: number }> = {};
   for (const r of runs) {
-    const d = londonDate(r.started_at);
+    const d = localDate(r.started_at);
     const day = (out[d] ??= { distanceKm: 0, durationS: 0, avgHr: null, runs: 0 });
     day.distanceKm = Math.round((day.distanceKm + r.distance_km) * 1000) / 1000;
     day.durationS += r.duration_s;

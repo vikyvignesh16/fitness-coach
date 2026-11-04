@@ -1,9 +1,12 @@
 import type { PlanWeek } from "./types";
 
-/** Today's date in London as yyyy-mm-dd. */
-export function todayLondon(now: Date = new Date()): string {
+/** Home time zone. Vicky lives in Paris. Every "which day is it" question uses this one zone. */
+export const HOME_TIME_ZONE = "Europe/Paris";
+
+/** Today's date in the home time zone as yyyy-mm-dd. */
+export function todayLocal(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/London",
+    timeZone: HOME_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
