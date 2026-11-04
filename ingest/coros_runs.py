@@ -30,8 +30,15 @@ def to_seconds(clock: str) -> int:
     return total
 
 
-def parse_sport_records(text: str) -> list[dict]:
-    """Turn the text from querySportRecords into run rows. Raises if the count does not match the header."""
+INDOOR_RUN = 101  # a treadmill session can be saved with a time and no distance
+
+
+def parse_sport_records(text: str, skipped: list[dict] | None = None) -> list[dict]:
+    """Turn the text from querySportRecords into run rows. Raises if the count does not match the header.
+
+    Indoor runs saved without a distance are left out, because inventing a distance would be wrong.
+    They are added to `skipped` (if given) so the caller can say so.
+    """
     if text.lstrip().startswith('"'):  # COROS sends the text as a JSON string, newlines written as \n
         text = json.loads(text)
     header = re.search(r"\((\d+) records?\)", text)
@@ -49,6 +56,15 @@ def parse_sport_records(text: str) -> list[dict]:
         distance = re.search(r"Distance: ([\d.]+) (km|m)\b", block)  # short ones come as metres
         duration = re.search(r"Duration: ([\d:]+)", block)
         label = re.search(r"LabelId: (\d+)", block)
+        if int(sport.group(1)) == INDOOR_RUN and not distance and start and duration and label:
+            if skipped is not None:
+                day = re.match(r"\s*[^\n]*?(\d{4}-\d{2}-\d{2})", block)
+                skipped.append({
+                    "coros_id": label.group(1),
+                    "date": day.group(1) if day else None,
+                    "reason": "indoor run with no distance",
+                })
+            continue
         if not (start and distance and duration and label):
             raise ValueError("A COROS run is missing a field I need. Format may have changed.")
         hr = re.search(r"Avg HR: (\d+) bpm", block)
@@ -100,7 +116,11 @@ def main() -> None:
 
     end = datetime.now(timezone.utc).date()
     text = asyncio.run(fetch_run_text(token, mcp_url, end - timedelta(days=args.days), end))
-    runs = parse_sport_records(text)
+    skipped: list[dict] = []
+    runs = parse_sport_records(text, skipped)
+    if skipped:
+        print(f"Left out {len(skipped)} indoor runs saved without a distance: "
+              + ", ".join(s["date"] or "?" for s in skipped))
     if len(runs) >= LIMIT:
         print(f"Warning: hit the {LIMIT} record limit. Run again with fewer days.")
     for r in sorted(runs, key=lambda r: r["started_at"]):

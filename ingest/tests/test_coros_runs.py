@@ -96,6 +96,44 @@ def test_distance_under_a_km_comes_in_metres():
     assert runs[0]["distance_km"] == 0.792
 
 
+TREADMILL = """Sport Records — 2026-03-01 to 2026-03-08 (3 records)
+========================
+
+1. Indoor Run — 2026-03-08
+   Time Window: startTimestamp=1772952186 | endTimestamp=1772958022
+   Duration: 1:37:16
+
+   LabelId: 480124298776838347 | SportType: 101
+
+2. Outdoor Run — 2026-03-07
+   Time Window: startTimestamp=1772870000 | endTimestamp=1772873000
+   Duration: 50:00 | Distance: 10.00 km
+   LabelId: 480124298776838111 | SportType: 100
+
+3. Indoor Run — 2026-03-04
+   Time Window: startTimestamp=1772604533 | endTimestamp=1772607137
+   Duration: 43:24 | Distance: 8.2 km
+   LabelId: 480124301729628271 | SportType: 101
+"""
+
+
+def test_indoor_run_without_distance_is_skipped_and_reported():
+    skipped: list[dict] = []
+    runs = parse_sport_records(TREADMILL, skipped)
+    assert [r["coros_id"] for r in runs] == ["480124298776838111", "480124301729628271"]
+    assert skipped == [{"coros_id": "480124298776838347", "date": "2026-03-08", "reason": "indoor run with no distance"}]
+
+
+def test_indoor_run_with_distance_is_kept():
+    assert parse_sport_records(TREADMILL)[1]["distance_km"] == 8.2
+
+
+def test_outdoor_run_without_distance_still_raises():
+    broken = TREADMILL.replace("Distance: 10.00 km", "")
+    with pytest.raises(ValueError, match="missing a field"):
+        parse_sport_records(broken)
+
+
 def test_zero_records_is_fine():
     assert parse_sport_records("Sport Records — a to b (0 records)\n") == []
 
