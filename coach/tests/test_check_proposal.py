@@ -245,8 +245,16 @@ def test_save_refuses_a_plan_with_errors_or_no_reason_or_a_used_version():
 def test_long_watch_descriptions_are_reported_not_cut():
     from coach.check_proposal import check_descriptions
     r = good_run()
-    r["notes"] = "x" * 450
+    r["steps"][0]["effort"] = "x" * 450
+    r["coros_workout"]["steps"] = r["steps"]
     out = check_descriptions(plan_with(r))
     assert out and "longer than 400" in out[0]
-    assert r["notes"] == "x" * 450
+    assert r["steps"][0]["effort"] == "x" * 450
     assert check_descriptions(plan_with(good_run())) == []
+
+
+def test_run_notes_do_not_count_because_they_are_not_sent():
+    from coach.check_proposal import check_descriptions
+    r = good_run()
+    r["notes"] = "x" * 900
+    assert check_descriptions(plan_with(r)) == []

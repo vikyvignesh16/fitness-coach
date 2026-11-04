@@ -72,7 +72,7 @@ begin
   from jsonb_array_elements(prop.source->'gates') g;
 
   -- Watch approvals that were never sent and never started, for days whose watch workout is not the same any more.
-  -- What the watch job sends is the workout steps, its name and the run notes (ingest/watch_course.to_course).
+  -- What the watch job sends is the workout steps and its name (ingest/watch_course.to_course). Notes are never sent.
   if base_id is not null then
     delete from public.approvals a
     where a.user_id = me and a.kind = 'watch_workout'
@@ -82,9 +82,9 @@ begin
         from public.plan_days old_d
         join public.plan_days new_d on new_d.date = old_d.date and new_d.plan_version_id = new_id
         where old_d.plan_version_id = base_id and old_d.date = a.subject_date
-          and (old_d.run #> '{coros_workout,steps}', old_d.run #> '{coros_workout,name}', old_d.run -> 'notes')
+          and (old_d.run #> '{coros_workout,steps}', old_d.run #> '{coros_workout,name}')
               is distinct from
-              (new_d.run #> '{coros_workout,steps}', new_d.run #> '{coros_workout,name}', new_d.run -> 'notes')
+              (new_d.run #> '{coros_workout,steps}', new_d.run #> '{coros_workout,name}')
       );
   end if;
 

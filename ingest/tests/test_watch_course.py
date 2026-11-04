@@ -95,8 +95,12 @@ class TestExamples:
         assert "walk" in c["courseDescription"]
         assert "Repeat 1 times" not in c["courseDescription"]
 
-    def test_description_includes_the_plans_own_notes(self):
-        assert "ankle/arch checks pass" in to_course(run_on("2026-11-02"))["courseDescription"]
+    def test_the_plans_notes_are_never_sent_to_coros(self):
+        run = run_on("2026-11-02")
+        assert "ankle/arch checks pass" in run["notes"]  # the plan does have this note
+        assert "ankle" not in to_course(run)["courseDescription"]
+        run["notes"] = "SECRET-NOTE-TEXT"
+        assert "SECRET-NOTE-TEXT" not in to_course(run)["courseDescription"]
 
 
 class TestEveryPlannedRun:

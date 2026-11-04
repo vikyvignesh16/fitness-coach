@@ -1,7 +1,7 @@
 // Compares a draft plan with the plan in use, day by day. Pure functions, no database.
 // A day counts as changed when its run differs, ignoring the fueling text, because the fueling text never reaches
 // the watch. watchChanged is the narrower rule for what the watch job actually sends; the database function
-// adopt_plan_proposal uses the same three fields to decide which unsent approvals to cancel.
+// adopt_plan_proposal uses the same two fields to decide which unsent approvals to cancel.
 import type { PlanDay, PlanRun } from "./types";
 import { describeSteps } from "./workout-steps";
 
@@ -51,13 +51,14 @@ export function runChanged(before: PlanRun | null | undefined, after: PlanRun | 
 type WatchRun = PlanRun & { coros_workout?: { steps?: unknown; name?: string } | null };
 
 /**
- * True when what the watch job sends would differ. That is the workout steps, its name and the run notes
- * (see ingest/watch_course.to_course). The database function adopt_plan_proposal uses the same three fields.
+ * True when what the watch job sends would differ. That is the workout steps and its name
+ * (see ingest/watch_course.to_course; the run notes are not sent). The database function adopt_plan_proposal
+ * uses the same two fields.
  */
 export function watchChanged(before: PlanRun | null | undefined, after: PlanRun | null | undefined): boolean {
   const pick = (r: PlanRun | null | undefined) => {
     const w = r as WatchRun | null | undefined;
-    return [w?.coros_workout?.steps ?? null, w?.coros_workout?.name ?? null, w?.notes ?? null];
+    return [w?.coros_workout?.steps ?? null, w?.coros_workout?.name ?? null];
   };
   return !same(pick(before), pick(after));
 }

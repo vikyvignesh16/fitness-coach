@@ -128,6 +128,6 @@ def to_course(run: dict, name: str | None = None) -> dict:
     title = name or plan.get("name") or "Run"
     if len(title) > MAX_NAME:
         raise CourseError(f"Workout name is longer than {MAX_NAME} characters")
-    notes = (run.get("notes") or "").strip()
-    description = " ".join(text + ([notes] if notes else []))
+    # The plan's run notes are not sent. They can mention ankle symptoms and are for the web app only.
+    description = " ".join(text)
     return {"courseName": title, "courseDescription": description, "sportType": RUNNING, "sections": sections}

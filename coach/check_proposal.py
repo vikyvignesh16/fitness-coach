@@ -150,7 +150,7 @@ def check_runs(plan: dict) -> tuple[list[str], list[str]]:
 
 
 def check_descriptions(plan: dict) -> list[str]:
-    """The run notes are copied into the COROS workout description. COROS's limit is not known, so say if any are long."""
+    """The COROS description is built from the steps. COROS's length limit is not known, so say if any are long."""
     lengths = []
     for _, day in _days(plan):
         run = day.get("run") or {}

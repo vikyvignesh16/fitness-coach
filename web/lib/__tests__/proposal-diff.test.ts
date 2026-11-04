@@ -37,10 +37,12 @@ describe("runChanged", () => {
 
 describe("watchChanged", () => {
   const w = (steps: unknown, name = "n", notes = "x") => ({ ...run({ notes }), coros_workout: { steps, name } }) as PlanRun;
-  it("is true for new steps, a new name or new notes", () => {
+  it("is true for new steps or a new name", () => {
     expect(watchChanged(w([1]), w([2]))).toBe(true);
     expect(watchChanged(w([1]), w([1], "other"))).toBe(true);
-    expect(watchChanged(w([1]), w([1], "n", "other"))).toBe(true);
+  });
+  it("is false when only the notes changed, because notes are not sent to the watch", () => {
+    expect(watchChanged(w([1]), w([1], "n", "other"))).toBe(false);
   });
   it("is false when only other fields differ, or when the keys are in a different order", () => {
     const a = { ...w([{ a: 1, b: 2 }]), distance_km: 8 } as PlanRun;
