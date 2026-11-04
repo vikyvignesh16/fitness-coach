@@ -12,7 +12,6 @@ import os
 import re
 from datetime import date, datetime, timedelta, timezone
 from typing import Protocol
-from zoneinfo import ZoneInfo
 
 import httpx
 from dotenv import load_dotenv
@@ -20,11 +19,11 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
 from ingest import coros_auth as auth
+from ingest.home_zone import HOME_ZONE
 from ingest.watch_course import CourseError, to_course
 
 MAX_DAYS_AHEAD = 90
 STALE_AFTER = timedelta(minutes=15)
-HOME_ZONE = ZoneInfo("Europe/Paris")
 _ID = re.compile(r"idInPlan\W{0,6}(\d+)")
 
 

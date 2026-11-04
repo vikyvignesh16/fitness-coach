@@ -1,0 +1,17 @@
+{
+  "note": "Facts Vicky gave in chat on 2026-11-04. The evidence pack for ChatGPT is built from these and from the database.",
+  "races": [
+    {"date": "2026-03-08", "event": "Half marathon (her first ever)"},
+    {"date": "2026-04-05", "event": "10K"},
+    {"date": "2026-05-10", "event": "10K"},
+    {"date": "2026-06-07", "event": "10K"}
+  ],
+  "injury": "Ankle injury. No running from 2026-08-24 to 2026-10-11. Returned to running 2026-10-12. Ankle return check passed 2026-11-02.",
+  "goal": "Train for 3:15 (4:37 per km) and push harder on the day.",
+  "trips": "She travels often and runs on trips too. Only bad weather would stop a run.",
+  "requests": [
+    "A pace range on every running step of every future run, built from her race results this year.",
+    "Marathon pace blocks inside long runs, built up gradually, so she becomes familiar with that pace."
+  ],
+  "heart_rate": "A chest strap arrives on 2026-11-05. The first run with it is planned for Friday 2026-11-06. Do not set heart rate targets yet. Average heart rates in this pack come from the wrist and are not reliable."
+}
