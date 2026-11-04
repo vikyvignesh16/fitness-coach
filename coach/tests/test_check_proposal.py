@@ -170,3 +170,83 @@ def test_saying_the_10k_test_was_replaced_is_not_flagged():
     r["notes"] = "Recalibrate after 10K test."
     _, warnings = check_runs(plan_with(r))
     assert any("10K test" in w for w in warnings)
+
+
+# ---- saving a draft ----
+
+class FakeTable:
+    def __init__(self, db, name):
+        self.db, self.name, self.filters, self.row = db, name, {}, None
+
+    def select(self, _cols):
+        return self
+
+    def eq(self, k, v):
+        self.filters[k] = v
+        return self
+
+    def order(self, *_a, **_k):
+        return self
+
+    def limit(self, _n):
+        return self
+
+    def insert(self, row):
+        self.row = row
+        return self
+
+    def execute(self):
+        class R: pass
+        r = R()
+        if self.row is not None:
+            self.db.inserted.append((self.name, self.row))
+            r.data = [{"id": "draft-1"}]
+        else:
+            r.data = [x for x in self.db.rows.get(self.name, []) if all(x.get(k) == v for k, v in self.filters.items() if k != "user_id")]
+        return r
+
+
+class FakeSb:
+    def __init__(self, rows=None):
+        self.rows, self.inserted = rows or {}, []
+
+    def table(self, name):
+        return FakeTable(self, name)
+
+
+OK = {"errors": [], "warnings": ["w"]}
+
+
+def test_save_stores_a_draft_with_the_checks_and_base():
+    from coach.check_proposal import save_draft
+    sb = FakeSb({"plan_versions": [{"id": "v51", "version": "5.1"}]})
+    assert save_draft(sb, "me", {"plan_version": "9.9"}, OK, " why ") == "draft-1"
+    table, row = sb.inserted[0]
+    assert table == "plan_proposals" and row["reason"] == "why"
+    assert row["checks"] == {"errors": [], "warnings": ["w"]} and row["base_version_id"] == "v51"
+
+
+def test_save_refuses_a_plan_with_errors_or_no_reason_or_a_used_version():
+    import pytest
+    from coach.check_proposal import SaveRefused, save_draft
+    sb = FakeSb({"plan_versions": [{"id": "v51", "version": "5.1"}]})
+    with pytest.raises(SaveRefused, match="problems"):
+        save_draft(sb, "me", {"plan_version": "9.9"}, {"errors": ["x"], "warnings": []}, "why")
+    with pytest.raises(SaveRefused, match="reason"):
+        save_draft(sb, "me", {"plan_version": "9.9"}, OK, "  ")
+    with pytest.raises(SaveRefused, match="already exists"):
+        save_draft(sb, "me", {"plan_version": "5.1"}, OK, "why")
+    draft = FakeSb({"plan_proposals": [{"id": "p", "version": "9.9"}]})
+    with pytest.raises(SaveRefused, match="already exists"):
+        save_draft(draft, "me", {"plan_version": "9.9"}, OK, "why")
+    assert sb.inserted == [] and draft.inserted == []
+
+
+def test_long_watch_descriptions_are_reported_not_cut():
+    from coach.check_proposal import check_descriptions
+    r = good_run()
+    r["notes"] = "x" * 450
+    out = check_descriptions(plan_with(r))
+    assert out and "longer than 400" in out[0]
+    assert r["notes"] == "x" * 450
+    assert check_descriptions(plan_with(good_run())) == []

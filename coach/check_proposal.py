@@ -20,6 +20,7 @@ BASE_PLAN = Path(__file__).resolve().parent.parent / "data" / "paris_marathon_20
 IGNORED_FOR_PAST = {"fueling_hydration", "coros_workout"}  # extra detail may be added to past days
 STEP_SUM_TOLERANCE_KM = 0.6
 WEEK_SUM_TOLERANCE_KM = 0.6
+LONG_DESCRIPTION = 400  # v5.1's longest was 359
 NOTE_FIELDS = ["before", "during", "after", "next_24_48h", "stop_or_modify", "heart_rate"]
 EASY_TYPES = {"easy", "recovery", "long_run", "easy_strides"}
 HARD_TYPES = {"half_marathon_test", "10k_test", "marathon_race"}
@@ -148,6 +149,24 @@ def check_runs(plan: dict) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+def check_descriptions(plan: dict) -> list[str]:
+    """The run notes are copied into the COROS workout description. COROS's limit is not known, so say if any are long."""
+    lengths = []
+    for _, day in _days(plan):
+        run = day.get("run") or {}
+        if run.get("coros_workout") and run.get("steps"):
+            try:
+                lengths.append((len(to_course(run)["courseDescription"]), day["date"]))
+            except (CourseError, KeyError, TypeError, ValueError):
+                continue  # already reported by check_runs
+    long = [(n, d) for n, d in lengths if n > LONG_DESCRIPTION]
+    if not long:
+        return []
+    top = max(long)
+    return [f"{len(long)} watch descriptions are longer than {LONG_DESCRIPTION} characters (longest {top[0]} on {top[1]}). "
+            "COROS's limit is not known, so check the first one on the watch before sending the rest."]
+
+
 def check_notes(plan: dict) -> list[str]:
     """Coaching notes on every day, all six fields filled in."""
     out = []
@@ -208,7 +227,7 @@ def run_checks(plan: dict, base: dict, today: date) -> dict:
     return {
         "errors": e1 + e2 + [f"{v.date or 'week ' + str(v.week)}: {v.message} [{v.rule}]" for v in safety if v.level == "fail"]
         + check_notes(plan),
-        "warnings": w1 + w2 + check_totals(plan) + [f"{v.date or 'week ' + str(v.week)}: {v.message} [{v.rule}]" for v in safety if v.level != "fail"],
+        "warnings": w1 + w2 + check_totals(plan) + check_descriptions(plan) + [f"{v.date or 'week ' + str(v.week)}: {v.message} [{v.rule}]" for v in safety if v.level != "fail"],
     }
 
 
@@ -230,15 +249,58 @@ def report(result: dict, name: str) -> str:
     return "\n".join(lines)
 
 
+class SaveRefused(Exception):
+    """The draft was not saved. The message says why, in plain words."""
+
+
+def save_draft(sb, owner: str, plan: dict, result: dict, reason: str) -> str:
+    """Store a checked plan as a draft in plan_proposals. It is not a plan version, so nothing in the app changes."""
+    if result["errors"]:
+        raise SaveRefused("The plan still has problems to fix, so it was not saved.")
+    if not reason.strip():
+        raise SaveRefused("Say why the plan changed with --reason.")
+    version = plan.get("plan_version")
+    for table in ("plan_versions", "plan_proposals"):
+        found = sb.table(table).select("id").eq("user_id", owner).eq("version", version).execute().data
+        if found:
+            raise SaveRefused(f"Version {version} already exists in {table}. Plan versions are never overwritten.")
+    base = (sb.table("plan_versions").select("id").eq("user_id", owner)
+            .order("created_at", desc=True).limit(1).execute().data)
+    row = {
+        "user_id": owner,
+        "version": version,
+        "source": plan,
+        "reason": reason.strip(),
+        "checks": {"errors": result["errors"], "warnings": result["warnings"]},
+        "base_version_id": base[0]["id"] if base else None,
+    }
+    return sb.table("plan_proposals").insert(row).execute().data[0]["id"]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("plan", type=Path)
     parser.add_argument("--base", type=Path, default=BASE_PLAN)
+    parser.add_argument("--save", action="store_true", help="store the plan as a draft for Vicky to approve in the app")
+    parser.add_argument("--reason", default="", help="why the plan changed (required with --save)")
     args = parser.parse_args()
     plan = json.loads(args.plan.read_text())
     base = json.loads(args.base.read_text())
     result = run_checks(plan, base, datetime.now(HOME_ZONE).date())
     print(report(result, args.plan.name))
+    if args.save:
+        import os
+        from dotenv import load_dotenv
+        from supabase import create_client
+        from ingest.import_plan import find_owner
+        load_dotenv()
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
+        try:
+            draft_id = save_draft(sb, find_owner(sb), plan, result, args.reason)
+        except SaveRefused as e:
+            print(f"\nNot saved: {e}")
+            return 1
+        print(f"\nSaved as draft {draft_id}. Open /plan/proposal in the app to read it and approve.")
     return 1 if result["errors"] else 0
 
 

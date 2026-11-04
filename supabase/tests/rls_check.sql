@@ -18,3 +18,10 @@ set local role anon;
 select 'calendar_feeds' as t, count(*) from calendar_feeds having count(*) > 0;
 select 'wrong token' as t where calendar_feed('not-a-real-token') is not null;
 reset role;
+
+-- 4. Draft plans (migration 0010). Both must return zero rows.
+--    The anon role must not read drafts, and must not be able to adopt one.
+set local role anon;
+select 'plan_proposals' as t, count(*) from plan_proposals having count(*) > 0;
+reset role;
+select 'anon can adopt' as t where has_function_privilege('anon', 'adopt_plan_proposal(uuid)', 'execute');
