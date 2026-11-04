@@ -10,7 +10,7 @@ Set by Vicky on 2026-11-02. Each rule is a plain, tested function in coach/safet
 Never weaken a limit to make a test pass. Never move a limit into a prompt. To change a number, Vicky decides, then add a decision log entry.
 
 ## 1. Weekly mileage ramp (rule id: ramp)
-* Compare each week's total km with the last non recovery week. Phase "Recovery" weeks are never a baseline. Test weeks and taper weeks can be.
+* Compare each week's total km with the highest of the previous four weeks (changed 2026-11-04 by Vicky; it used to be the last non recovery week). A dip from a race or a recovery week does not lower the baseline, and a peak more than four weeks back is forgotten.
 * Warning above 10 percent. Fail above 15 percent. Exactly 10 percent is fine.
 * Week 2 is exempt. Its baseline is 33.55 km, the average of 34.08 and 33.02, not the 8.01 km of week 1.
 * Race week (week 23) is exempt.
@@ -57,7 +57,7 @@ Never weaken a limit to make a test pass. Never move a limit into a prompt. To c
 * Unknown pain flags raise an error instead of being ignored.
 
 ## v5.1 against these rules (2026-11-02)
-No fails. Warnings: ramp in weeks 3, 4, 7, 11 and 15, long run share in weeks 6 and 8 (45.5 percent), and heavy legs on 11 March until recovery is recorded.
+No fails. Warnings: ramp in weeks 3, 4, 7 and 15, long run share in weeks 6 and 8 (45.5 percent), and heavy legs on 11 March until recovery is recorded.
 
 ## Notes for the next model revision
 See docs/notes_for_model.md.

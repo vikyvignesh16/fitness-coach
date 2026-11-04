@@ -10,6 +10,7 @@ from coach.safety.violations import Violation
 # Limits set by Vicky on 2026-11-02. Change only when Vicky decides, and add a decision log entry.
 RAMP_WARN_PCT = 10
 RAMP_FAIL_PCT = 15
+RAMP_WINDOW_WEEKS = 4  # a week is compared with the highest of the previous four weeks (rule changed 2026-11-04)
 LONG_RUN_CAP_KM = 32
 LONG_SHARE_WARN_PCT = 45
 LONG_SHARE_FAIL_PCT = 50
@@ -82,10 +83,13 @@ def _is_test_week(week: dict) -> bool:
 
 
 def check_ramp(plan: dict, first_week_baseline_km: float = FIRST_WEEK_BASELINE_KM) -> list[Violation]:
+    """Each week against the highest of the previous four weeks, so a dip (a race, a recovery week) does not
+    make a return to recent volume look like a spike. The first plan week uses the history baseline."""
     out = []
-    baseline = first_week_baseline_km
+    history: list[float] = []
     for week in _weeks(plan):
         km = _week_km(week)
+        baseline = max(history[-RAMP_WINDOW_WEEKS:]) if history else first_week_baseline_km
         if not _is_race_week(week):
             pct = round((km - baseline) / baseline * 100, 9)
             if pct > RAMP_FAIL_PCT:
@@ -97,9 +101,8 @@ def check_ramp(plan: dict, first_week_baseline_km: float = FIRST_WEEK_BASELINE_K
             if level:
                 out.append(Violation(
                     "ramp", level, f"Week {week['week']} is {km:g} km, {pct:.1f} percent more than the "
-                    f"last non recovery week ({baseline:g} km).", week=week["week"]))
-        if week["phase"] != "Recovery":
-            baseline = km
+                    f"highest of the previous {RAMP_WINDOW_WEEKS} weeks ({baseline:g} km).", week=week["week"]))
+        history.append(km)
     return out
 
 

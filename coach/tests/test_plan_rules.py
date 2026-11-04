@@ -37,9 +37,33 @@ def test_falling_mileage_is_never_a_violation():
     assert r.check_ramp(km_plan(30, 10), 40) == []
 
 
-def test_ramp_skips_recovery_weeks_as_baseline():
+def test_a_dip_does_not_lower_the_baseline():
     # 57, recovery 48, then 57: compared with 57, not 48
     assert r.check_ramp(km_plan(57, 48, 57, phases=["Base", "Recovery", "Base"]), 57) == []
+
+
+# Rule changed 2026-11-04 (Vicky's decision): the baseline is the highest of the previous four weeks.
+def test_returning_to_recent_volume_after_a_race_dip_is_fine():
+    # the December 2026 case: 50, taper 19, race week 36.1, recovery 37, back to 52
+    plan_ = km_plan(50, 19, 36.1, 37, 52, phases=["Base", "Base", "Recovery", "10K test", "Build"])
+    assert levels(r.check_ramp(plan_, 50), "ramp") == []
+
+
+def test_a_genuine_spike_still_fails():
+    assert levels(r.check_ramp(km_plan(40, 40, 40, 60), 40), "ramp") == ["fail"]
+
+
+def test_overshooting_after_a_dip_still_fails():
+    # 50, dip to 20, then 60: 60 is 20 percent over the recent peak of 50
+    assert levels(r.check_ramp(km_plan(50, 20, 60), 50), "ramp") == ["fail"]
+
+
+def test_a_peak_exactly_four_weeks_back_still_counts():
+    assert r.check_ramp(km_plan(50, 30, 30, 30, 50), 50) == []
+
+
+def test_a_peak_five_weeks_back_is_forgotten():
+    assert levels(r.check_ramp(km_plan(50, 30, 30, 30, 30, 50), 50), "ramp") == ["fail"]
 
 
 def test_first_week_uses_the_given_baseline_not_week_one():
@@ -179,7 +203,7 @@ def test_v51_has_no_fails():
 def test_v51_warnings_are_exactly_the_known_ones():
     got = sorted((v.rule, v.week) for v in r.check_plan(V51))
     assert got == sorted([
-        ("ramp", 3), ("ramp", 4), ("ramp", 7), ("ramp", 11), ("ramp", 15),
+        ("ramp", 3), ("ramp", 4), ("ramp", 7), ("ramp", 15),  # week 11 stopped warning under the 2026-11-04 rule
         ("long_run_share", 6), ("long_run_share", 8),
         ("legs_dates", 20),
     ])

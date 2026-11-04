@@ -223,3 +223,17 @@ Riegel's formula (time times distance ratio to the power 1.06) is shown next to 
 The reply format is the plan's own run shape (steps with pace ranges) so the same steps convert to watch workouts with ingest/watch_course.py. A test proves the example in the pack converts.
 Alternatives: calling OpenRouter from code (rejected for token cost); pasting the whole 475 KB plan (rejected: too large, and ChatGPT only needs runs).
 Also: indoor runs that COROS saves with a time and no distance are left out of the import and reported, because inventing a distance would be wrong. ingest/home_zone.py now holds the Paris time zone for the Python side.
+
+## 2026-11-04 Weekly ramp is measured against the highest of the previous four weeks
+Chose (Vicky's decision): each week is compared with the highest weekly distance in the previous four weeks. Warning above 10 percent, fail above 15 percent, race week exempt, first plan week uses the 33.55 km history baseline. This replaces "the last non recovery week" from the 2026-11-02 entry.
+Why: Vicky's plan puts a half marathon on Monday 21 December. The taper week before it is 19 km, and measuring the return to 50 km against that 19 km looked like a 90 percent jump, though 52 km is only 4 percent above the 50 km she runs in week 7. Plan v5.5 failed on weeks 9, 10 and 11 for that reason.
+Tested on real numbers: v5.5 loses those three failures. A true spike (40, 40, 40 then 60) still fails. Overshooting after a dip (50, 20, 60) still fails. A peak more than four weeks back is forgotten, so 50, 30, 30, 30, 30, 50 still fails. v5.1 loses one warning (week 11).
+Trade-off: the rule lets Vicky return to a load she handled in the last four weeks, even after a dip. If the dip was an injury, this rule would not catch a rebound. The ankle gate and the persistent pain stop do not change and remain the guard for that.
+Alternatives: ChatGPT rebalances weeks 8 to 11 (kept as a fallback); exempting only the taper week (rejected: week 11 would still fail against week 10).
+
+## 2026-11-04 A checker for plans that ChatGPT sends back
+Chose: coach/check_proposal.py, run as `python -m coach.check_proposal path/to/plan.json`. It reads the file and the plan of record, prints what to fix, and prints a block Vicky pastes back to ChatGPT. It never edits the plan.
+Why: ChatGPT is used through the chat window, so the "send violations back to the model" step is done by hand. The checker makes that step quick and the same every time.
+Blocking fixes: a past day changed, a missing or extra date, no new version number, a running step with no pace range, a pace COROS would refuse, coros_workout steps that differ from the run's steps, a run that cannot become a watch workout, and any safety rule that fails. Not blocking, but listed: step distances that do not add up, week totals, stale effort ranges, leftover "10K test" wording, headline text that mentions marathon pace with no such step, and safety warnings.
+Also checks that every day has the six coaching note fields. The notes are for the web app only and are not sent to the watch.
+Alternatives: calling the model from code (rejected for token cost); fixing problems automatically (rejected: code never edits a plan).
