@@ -200,3 +200,18 @@ Status: open
 **Choice:** The parser now accepts km or m and stores kilometres. I kept the loud failure for a truly missing field, because a silent skip could hide a real format change.
 **Alternatives:** Skip runs the parser cannot read (rejected: quiet data loss). Ignore anything under 1 km (rejected: hides data, and the rule belongs to Vicky, not the parser).
 **Note:** That activity is a 24 minute walk at 30:47 per km that the watch labelled as an outdoor run. It is saved like any other run.
+
+## 2026-11-04 Workout page and calendar are read only views of the stored plan
+Chose: a page per planned day (/plan/[date]) and a month grid (/calendar). Both read plan_days, runs and approvals with Vicky's own login, so row level security applies. No new data was needed, because the plan JSON already holds each run's steps.
+Steps are written out by one plain function (web/lib/workout-steps.ts). It shows the plan as written and never edits it. A test runs it over all 101 planned runs in v5.1 and checks that every step gets one line and every distance survives.
+Layout: seven narrow columns on a phone, with a number and an icon per day, not text. Each day has a spoken label for screen readers. A locked week shows a lock and no workout, the same as the Plan page.
+Alternatives: a calendar library such as FullCalendar (rejected: heavy, built for desktop, and the grid here is about 80 lines); a week strip instead of a month (rejected: Vicky asked for a calendar).
+
+## 2026-11-04 Google Calendar by a private subscription link, one way
+Chose: a link ending in .ics that Google Calendar subscribes to (Other calendars, From URL). Each planned run is an all day event with the steps in the description. Locked weeks, rest days and the recorded past run are left out.
+Why: simplest thing that works, nothing to sign in to, nothing to renew. Google fetches the link itself, about every 12 to 24 hours, so changes show late. That is Google's schedule and we cannot change it.
+Alternatives: Google Calendar API with sign in (instant and can set a 7am reminder, but needs a Google Cloud project, an OAuth app and a stored Google token, and as far as I know Google logs out unverified personal apps after 7 days; revisit if the delay annoys Vicky); a one time .ics download (goes stale at once).
+Security: Google cannot log in, so the link is the key. The token is 32 random bytes (43 characters). Only its sha256 hash is stored (calendar_feeds, migration 0009), so a database leak does not leak the link. The link is shown once. Making a new one replaces the old, which stops working.
+The web service holds only the anon key. So the feed reads through one database function, calendar_feed(token), which is security definer and returns only: plan version, each run's type, distance, duration, pace and steps, and the ankle gate results. It leaves out the plan notes (they mention ankle symptoms), and never touches weights, photos, pain, meals or runs. A wrong token returns null, and a token of the wrong shape never reaches the database. Tests cover each of these, and I broke three of the rules on purpose to check the tests catch them.
+The calendar page itself still needs a login. Only /calendar/feed/ is public.
+Event ids are plan-<date>@athlete-app, so a changed plan updates an event and does not add a second one.

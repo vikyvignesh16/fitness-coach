@@ -227,6 +227,16 @@ export async function loadGymSession(date: string): Promise<GymSessionData | nul
   };
 }
 
+// ---- Calendar link
+
+/** The date the current calendar link was made (yyyy-mm-dd), or null if there is none. The link itself is never stored. */
+export async function loadFeedCreatedOn(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("calendar_feeds").select("created_at").maybeSingle();
+  if (error) throw new Error("Could not read the calendar link.");
+  return data ? localDate(data.created_at) : null;
+}
+
 // ---- One planned day
 
 export type PlanDayPage = {

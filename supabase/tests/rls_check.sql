@@ -11,3 +11,10 @@ union all select 'runs', count(*) from runs having count(*) > 0
 union all select 'meals', count(*) from meals having count(*) > 0
 union all select 'checkins', count(*) from checkins having count(*) > 0;
 reset role;
+
+-- 3. The calendar feed (migration 0009). Both of these must return zero rows.
+--    The anon role must not read the link table, and a wrong token must give nothing.
+set local role anon;
+select 'calendar_feeds' as t, count(*) from calendar_feeds having count(*) > 0;
+select 'wrong token' as t where calendar_feed('not-a-real-token') is not null;
+reset role;

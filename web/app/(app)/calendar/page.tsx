@@ -2,14 +2,15 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { CalendarGrid, cellLabel } from "@/components/calendar-grid";
 import { buildMonth, monthLabel, parseMonth, shiftMonth } from "@/lib/calendar";
-import { loadDashboardData } from "@/lib/data";
+import { CalendarLinkCard } from "@/components/calendar-link-card";
+import { loadDashboardData, loadFeedCreatedOn } from "@/lib/data";
 import { lockedWeeks } from "@/lib/gates";
-import { todayLocal } from "@/lib/weeks";
+import { dayMonth, todayLocal } from "@/lib/weeks";
 
 export default async function CalendarPage(props: PageProps<"/calendar">) {
   const today = todayLocal();
   const month = parseMonth((await props.searchParams).month, today);
-  const { days, runs, ankleGatePassed } = await loadDashboardData();
+  const [{ days, runs, ankleGatePassed }, feedCreatedOn] = await Promise.all([loadDashboardData(), loadFeedCreatedOn()]);
   const weeks = buildMonth(month, days, runs, today, lockedWeeks(ankleGatePassed));
   const withRuns = weeks.flat().filter((c) => c.inMonth && c.inPlan && (c.plannedKm != null || c.doneKm != null));
   const nav = "text-muted-foreground flex size-11 items-center justify-center rounded-md";
@@ -45,6 +46,8 @@ export default async function CalendarPage(props: PageProps<"/calendar">) {
           </ul>
         )}
       </section>
+
+      <CalendarLinkCard createdOn={feedCreatedOn ? dayMonth(feedCreatedOn) : null} />
     </>
   );
 }
