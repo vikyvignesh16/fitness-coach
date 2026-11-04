@@ -142,7 +142,8 @@ def check_runs(plan: dict) -> tuple[list[str], list[str]]:
             warnings.append(f"{d}: a {run['type']} carries an easy effort range in coros_workout (RPE up to {top}). Probably left over from an older version.")
         if re.search(r"\bMP\b|marathon pace", run.get("pace_or_effort") or "") and not _has_fast_step(steps):
             warnings.append(f"{d}: the headline mentions marathon pace but no step is run at marathon pace.")
-        if run.get("type") not in ("10k_test",) and "10K test" in f"{run.get('pace_or_effort', '')} {run.get('notes', '')}":
+        text = f"{run.get('pace_or_effort', '')} {run.get('notes', '')}"
+        if run.get("type") not in ("10k_test",) and "10K test" in text and "replace" not in text.lower():
             warnings.append(f"{d}: still mentions the 10K test, which has been replaced.")
     return errors, warnings
 

@@ -161,3 +161,12 @@ def test_report_has_paste_block_only_when_there_is_something_to_say():
     assert "paste this" not in report({"errors": [], "warnings": []}, "x.json")
     out = report({"errors": ["a"], "warnings": ["b"]}, "x.json")
     assert "TO FIX: a" in out and "TO LOOK AT: b" in out and "fixes needed" in out
+
+
+def test_saying_the_10k_test_was_replaced_is_not_flagged():
+    r = good_run()
+    r["notes"] = "Replaces 10K test; the half marathon is the benchmark."
+    assert check_runs(plan_with(r)) == ([], [])
+    r["notes"] = "Recalibrate after 10K test."
+    _, warnings = check_runs(plan_with(r))
+    assert any("10K test" in w for w in warnings)
