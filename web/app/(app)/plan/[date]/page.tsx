@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CoachingNotesCard } from "@/components/coaching-notes";
 import { StatusBanner } from "@/components/status-banner";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,6 +79,8 @@ export default async function PlanDayPage(props: PageProps<"/plan/[date]">) {
               <CardContent className="text-sm">{run!.notes}</CardContent>
             </Card>
           )}
+
+          <CoachingNotesCard notes={day.coaching_notes} />
 
           {showWatch && (
             <Card>

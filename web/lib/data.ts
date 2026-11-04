@@ -6,6 +6,7 @@ import { sessionProgress, type HistorySet, type LoggedSet, type PlannedExercise 
 import { isRestDay } from "@/lib/labels";
 import { runState, upcomingRuns, waitingCount, type ApprovalRow, type RunState, type UpcomingRun } from "@/lib/watch-approve";
 import { checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLocal } from "@/lib/weeks";
+import { diffPlans, notesAdded, watchImpact, type DayChange, type DraftPlan } from "@/lib/proposal-diff";
 import type { PlanDay, PlanWeek, RunRow } from "@/lib/types";
 
 import { ANKLE_GATE_ID } from "@/lib/gate-record";
@@ -255,7 +256,7 @@ export async function loadPlanDay(date: string): Promise<PlanDayPage | null> {
   if (!version) return null;
 
   const [dayRes, gates, approval, runs] = await Promise.all([
-    supabase.from("plan_days").select("date, week, run, gym").eq("plan_version_id", version.id).eq("date", date).maybeSingle(),
+    supabase.from("plan_days").select("date, week, run, gym, coaching_notes").eq("plan_version_id", version.id).eq("date", date).maybeSingle(),
     supabase.from("approvals").select("passed, created_at").eq("kind", "gate").eq("gate_id", ANKLE_GATE_ID),
     supabase.from("approvals").select("subject_date, sent_at, send_error").eq("kind", "watch_workout").eq("subject_date", date).maybeSingle(),
     supabase.from("runs").select("coros_id, started_at, distance_km, duration_s, avg_hr").order("started_at"),
@@ -374,5 +375,72 @@ export async function loadHomeStatus(): Promise<{ painStopMessage: string | null
   return {
     painStopMessage: newest?.pain_stop ? (newest.pain_stop_message ?? "Your last check in says stop.") : null,
     checkinDue: checkinDue(today, newest?.week_start === mondayOf(today)),
+  };
+}
+
+// ---- A draft plan waiting for Vicky
+
+/** The version name of a draft waiting for approval, or null. Never throws: a missing table must not break the page. */
+export async function waitingDraftVersion(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("plan_proposals").select("version").eq("status", "draft").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    return error ? null : (data?.version ?? null);
+  } catch {
+    return null;
+  }
+}
+
+export type ProposalPage = {
+  id: string;
+  version: string;
+  currentVersion: string;
+  reason: string;
+  createdOn: string;
+  errors: string[];
+  warnings: string[];
+  changes: DayChange[];
+  notesAdded: number;
+  impact: { alreadySent: string[]; cancelled: string[] };
+};
+
+/** The newest draft with what it would change. Null when there is no draft. */
+export async function loadProposal(): Promise<ProposalPage | null> {
+  const supabase = await createClient();
+  const { data: draft, error } = await supabase
+    .from("plan_proposals")
+    .select("id, version, reason, checks, source, created_at")
+    .eq("status", "draft")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error("Could not read the draft plan.");
+  if (!draft) return null;
+
+  const { data: version } = await supabase
+    .from("plan_versions").select("id, version").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!version) throw new Error("Could not read the plan.");
+
+  const [days, approvals] = await Promise.all([
+    supabase.from("plan_days").select("date, week, run, gym, nutrition, coaching_notes").eq("plan_version_id", version.id),
+    supabase.from("approvals").select("subject_date, sent_at, send_started_at").eq("kind", "watch_workout"),
+  ]);
+  if (days.error || approvals.error) throw new Error("Could not compare the draft with your plan.");
+
+  const current = days.data as PlanDay[];
+  const plan = draft.source as DraftPlan;
+  const changes = diffPlans(current, plan);
+  return {
+    id: draft.id,
+    version: draft.version,
+    currentVersion: version.version,
+    reason: draft.reason,
+    createdOn: localDate(draft.created_at),
+    errors: (draft.checks?.errors ?? []) as string[],
+    warnings: (draft.checks?.warnings ?? []) as string[],
+    changes,
+    notesAdded: notesAdded(current, plan),
+    impact: watchImpact(changes, approvals.data ?? []),
   };
 }

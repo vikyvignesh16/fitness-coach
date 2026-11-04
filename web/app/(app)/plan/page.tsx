@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DraftPlanBanner } from "@/components/draft-plan-banner";
 import { DayRow } from "@/components/day-row";
 import { Badge } from "@/components/ui/badge";
 import { loadDashboardData } from "@/lib/data";
@@ -24,6 +25,7 @@ export default async function PlanPage() {
           <Link href="/calendar" className="underline">see the calendar</Link>.
         </p>
       </div>
+      <DraftPlanBanner />
       <div className="space-y-2">
         {weeks.map((w) => {
           const point = series.find((p) => p.week === w.week)!;

@@ -35,11 +35,22 @@ export type PlanGym = {
   key_exercises: { name: string; sets: number | null; reps: string; rir: number | null }[];
 };
 
+/** Web only guidance for a day. Never sent to the watch or the calendar. Plan v5.1 has none. */
+export type CoachingNotes = {
+  before?: string;
+  during?: string;
+  after?: string;
+  next_24_48h?: string;
+  stop_or_modify?: string;
+  heart_rate?: string;
+};
+
 export type PlanDay = {
   date: string; // yyyy-mm-dd
   week: number;
   run: PlanRun | null;
   gym: PlanGym | null;
+  coaching_notes?: CoachingNotes | null;
 };
 
 export type PlanWeek = {

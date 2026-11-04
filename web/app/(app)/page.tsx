@@ -1,5 +1,6 @@
 import { Watch } from "lucide-react";
 import Link from "next/link";
+import { DraftPlanBanner } from "@/components/draft-plan-banner";
 import { BigStat } from "@/components/big-stat";
 import { ProgressBar } from "@/components/progress-bar";
 import { StatusBanner } from "@/components/status-banner";
@@ -31,6 +32,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <DraftPlanBanner />
       {status.painStopMessage && (
         <StatusBanner level="stop" title="Your last check in says stop">
           {status.painStopMessage}{" "}
