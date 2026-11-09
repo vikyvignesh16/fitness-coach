@@ -482,3 +482,30 @@ export async function loadInsights(range: InsightsRange, today: string): Promise
     snapshot: snap.data as RecoverySnapshot | null,
   };
 }
+
+
+export type FitnessContext = {
+  planTypes: Record<string, string>; // plan run type for each date, like "easy" or "long_run"
+  targets: GoalTargets; // finish time goals from the plan
+};
+
+/** The newest plan's goals and what kind of run each day was meant to be. Used by the fitness charts. */
+export async function loadFitnessContext(): Promise<FitnessContext> {
+  const supabase = await createClient();
+  const { data: version, error } = await supabase
+    .from("plan_versions")
+    .select("id, targets:source->targets")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`Could not read the plan: ${error.message}`);
+  if (!version) throw new Error("No plan found. Run the plan import first.");
+  const { data: days, error: daysError } = await supabase
+    .from("plan_days")
+    .select("date, type:run->>type")
+    .eq("plan_version_id", version.id);
+  if (daysError) throw new Error(`Could not read the plan days: ${daysError.message}`);
+  const planTypes: Record<string, string> = {};
+  for (const d of days as unknown as { date: string; type: string | null }[]) if (d.type) planTypes[d.date] = d.type;
+  return { planTypes, targets: version.targets as unknown as GoalTargets };
+}

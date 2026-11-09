@@ -6,7 +6,7 @@ const today = "2026-11-09";
 describe("parseInsightsRange", () => {
   it("defaults to the last 7 days, today included", () => {
     expect(parseInsightsRange({}, today)).toEqual({
-      preset: "7", from: "2026-11-03", to: today, days: 7, view: "daily", notice: null,
+      preset: "7", from: "2026-11-03", to: today, days: 7, view: "daily", dist: "all", notice: null,
     });
   });
 
@@ -21,7 +21,7 @@ describe("parseInsightsRange", () => {
 
   it("reads a custom range and counts both end days", () => {
     expect(parseInsightsRange({ range: "custom", from: "2026-10-01", to: "2026-10-31" }, today)).toEqual({
-      preset: "custom", from: "2026-10-01", to: "2026-10-31", days: 31, view: "daily", notice: null,
+      preset: "custom", from: "2026-10-01", to: "2026-10-31", days: 31, view: "daily", dist: "all", notice: null,
     });
   });
 
@@ -66,6 +66,20 @@ describe("parseInsightsRange", () => {
 
   it("uses the first value when a parameter is repeated", () => {
     expect(parseInsightsRange({ range: ["30", "90"] }, today).preset).toBe("30");
+  });
+});
+
+describe("distance filter", () => {
+  it("reads 5-10 and 10-16, and anything else means all distances", () => {
+    expect(parseInsightsRange({ dist: "5-10" }, today).dist).toBe("5-10");
+    expect(parseInsightsRange({ dist: "10-16" }, today).dist).toBe("10-16");
+    expect(parseInsightsRange({ dist: "marathon" }, today).dist).toBe("all");
+  });
+
+  it("is kept when the range or view changes, and left out when it is all", () => {
+    const r = parseInsightsRange({ range: "30", dist: "5-10" }, today);
+    expect(insightsHref(r, { preset: "90" })).toBe("/insights?range=90&view=daily&dist=5-10");
+    expect(insightsHref(r, { dist: "all" })).toBe("/insights?range=30&view=daily");
   });
 });
 

@@ -2,22 +2,24 @@ import { ChartCard } from "@/components/insights/chart-card";
 import {
   HrvChart, LoadChart, RestingHrChart, SleepCompositionChart, SleepScoreChart, VolumeChart,
 } from "@/components/insights/charts";
+import { EfficiencyFilter } from "@/components/insights/efficiency-filter";
+import { EfficiencyChart, LongRunChart, MarathonChart, ThresholdChart, Vo2Chart } from "@/components/insights/fitness-charts";
 import { HowToRead } from "@/components/insights/how-to-read";
 import { HOW_TO } from "@/lib/insights-howto";
 import { KpiCard } from "@/components/insights/kpi-card";
 import { RangeControls } from "@/components/insights/range-controls";
-import { loadInsights, loadRuns } from "@/lib/data";
+import { loadFitnessContext, loadInsights, loadRuns } from "@/lib/data";
+import { efficiencyPoints, fitnessSeries, goalsFromTargets, longRunPerWeek } from "@/lib/insights-fitness";
 import { buildKpis } from "@/lib/insights-kpis";
 import { parseInsightsRange } from "@/lib/insights-range";
 import {
   buildSlots, hrvSeries, loadSeries, restingHrSeries, sleepComposition, sleepScore, weeklyVolume,
 } from "@/lib/insights-series";
-import { hrvTable, loadTable, rhrTable, scoreTable, sleepTable, volumeTable } from "@/lib/insights-tables";
+import { efficiencyTable, fitnessTable, hrvTable, loadTable, longRunTable, rhrTable, scoreTable, sleepTable, volumeTable } from "@/lib/insights-tables";
 import { todayLocal } from "@/lib/weeks";
 
 // Sections that still wait for their charts (the later steps of the plan).
 const LATER = [
-  { title: "Running fitness", note: "VO2max, threshold pace, marathon prediction and running efficiency." },
   { title: "Workout history and insights", note: "Your workouts with notes, and how recovery and training relate." },
 ];
 
@@ -31,7 +33,7 @@ const SectionHead = ({ title, note }: { title: string; note: string }) => (
 export default async function InsightsPage(props: PageProps<"/insights">) {
   const today = todayLocal();
   const range = parseInsightsRange(await props.searchParams, today);
-  const [{ kpiRows, rows, snapshot }, runs] = await Promise.all([loadInsights(range, today), loadRuns()]);
+  const [{ kpiRows, rows, snapshot }, runs, plan] = await Promise.all([loadInsights(range, today), loadRuns(), loadFitnessContext()]);
   const kpis = buildKpis(kpiRows, snapshot, today);
   const daysWithData = rows.filter((r) => r.day >= range.from && r.day <= range.to).length;
 
@@ -43,6 +45,10 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
   const rhr = restingHrSeries(rows, slots, view);
   const load = loadSeries(rows, slots);
   const volume = weeklyVolume(runs, range, today);
+  const longRuns = longRunPerWeek(runs, range);
+  const fitness = fitnessSeries(rows, slots);
+  const goals = goalsFromTargets(plan.targets);
+  const efficiency = efficiencyPoints(runs, plan.planTypes, range, today);
   const unit = view === "daily" ? "night" : "week";
 
   return (
@@ -87,9 +93,32 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
             hasData={volume.some((p) => p.km > 0)} table={volumeTable(volume)} howTo={HOW_TO.volume}>
             <VolumeChart data={volume} />
           </ChartCard>
+          <ChartCard title="Longest run each week" purpose="Is your long run building up steadily, or jumping?"
+            hasData={longRuns.some((p) => p.km !== null)} table={longRunTable(longRuns)} howTo={HOW_TO.longrun}>
+            <LongRunChart data={longRuns} />
+          </ChartCard>
           <ChartCard title="Short-term and long-term load" purpose="Is recent training heavier or lighter than what you are used to? COROS keeps about 30 days of this."
             hasData={load.some((p) => p.short !== null || p.long !== null)} table={loadTable(load, view)} howTo={HOW_TO.load}>
             <LoadChart data={load} />
+          </ChartCard>
+        </div>
+      </section>
+
+      <section aria-label="Running fitness" className="space-y-3">
+        <SectionHead title="Running fitness" note="VO2max, threshold pace and marathon prediction start filling in from the day the app began saving them." />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ChartCard title="VO2max" purpose="Your aerobic fitness, as COROS estimates it." hasData={fitness.some((p) => p.vo2max !== null)} table={fitnessTable(fitness, view)} howTo={HOW_TO.vo2}>
+            <Vo2Chart data={fitness} />
+          </ChartCard>
+          <ChartCard title="Threshold pace" purpose="The pace you can hold for a long hard effort. Faster is higher up." hasData={fitness.some((p) => p.thresholdS !== null)} table={fitnessTable(fitness, view)} howTo={HOW_TO.threshold}>
+            <ThresholdChart data={fitness} />
+          </ChartCard>
+          <ChartCard title="Marathon prediction" purpose="COROS's predicted marathon time against your A, B and C goals." hasData={fitness.some((p) => p.marathonS !== null)} table={fitnessTable(fitness, view)} howTo={HOW_TO.marathon}>
+            <MarathonChart data={fitness} goals={goals} />
+          </ChartCard>
+          <ChartCard title="Running efficiency" purpose="Are you getting faster at the same effort? Only easy runs are shown. Wrist heart rate can be off, so this sharpens as chest strap runs arrive."
+            hasData={efficiency.length > 0} table={efficiencyTable(efficiency)} howTo={HOW_TO.efficiency} controls={<EfficiencyFilter range={range} />}>
+            <EfficiencyChart data={efficiency} today={today} />
           </ChartCard>
         </div>
       </section>
