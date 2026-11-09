@@ -82,3 +82,50 @@ export type WeekPoint = {
   plannedKm: number;
   actualKm: number;
 };
+
+/** One row of health_daily. Every number can be null: null means COROS gave nothing, which is not the same as zero. */
+export type HealthDay = {
+  day: string; // yyyy-mm-dd, Paris date
+  sleep_score: number | null;
+  sleep_asleep_min: number | null;
+  sleep_total_min: number | null;
+  sleep_period_min: number | null;
+  sleep_deep_min: number | null;
+  sleep_light_min: number | null;
+  sleep_rem_min: number | null;
+  sleep_awake_min: number | null;
+  sleep_nap_min: number | null;
+  hrv_avg_ms: number | null;
+  hrv_label: string | null;
+  hrv_normal_low_ms: number | null;
+  hrv_normal_high_ms: number | null;
+  hrv_baseline_ms: number | null;
+  resting_hr: number | null;
+  hr_avg: number | null;
+  stress_avg: number | null;
+  steps: number | null;
+  exercise_min: number | null;
+  load_short: number | null;
+  load_long: number | null;
+  load_ratio: number | null;
+  load_label: string | null;
+  recovery_avg: number | null;
+  recovery_min: number | null;
+  recovery_max: number | null;
+  recovery_last: number | null;
+  vo2max: number | null;
+  running_level: number | null;
+  threshold_pace_s: number | null;
+  pred_5k_s: number | null;
+  pred_10k_s: number | null;
+  pred_half_s: number | null;
+  pred_marathon_s: number | null;
+  complete: boolean;
+};
+
+export type RecoverySnapshot = {
+  taken_at: string; // ISO time
+  recovery_pct: number;
+  level: string | null;
+  full_recovery_h: number | null;
+};
