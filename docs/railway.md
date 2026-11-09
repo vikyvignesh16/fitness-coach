@@ -23,6 +23,14 @@ All services deploy from the private GitHub repository, branch `main`.
 ## Service: watch (cron, sends approved workouts to the watch)
 Added in part 2 of the plan. Same root directory and variables as `runs`. Cron `*/5 * * * *`.
 
+## Service: health (cron, pulls sleep, HRV, heart rate, stress, training load, recovery and fitness from COROS)
+* Root directory: `/` (repo root)
+* Start command: `python -m ingest.coros_health --apply`
+* Cron schedule: `7 */3 * * *` (every 3 hours at 7 minutes past, UTC). The offset keeps it away from the runs job, which fires on :00, :15, :30 and :45, because both jobs may refresh the same COROS login.
+* Variables: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `COROS_MCP_URL` (same as `runs`)
+* Each run reads the last 3 days. The first load of history is done once by hand with `python -m ingest.coros_health --backfill --apply`.
+* The job must exit when finished. It does. It logs counts only, never tokens.
+
 ## After a change
 * Push to `main`. Railway rebuilds the services that use that code.
 * Check a cron job by pressing "Run now" in the dashboard and reading its logs. There must be no tokens or keys in them.
