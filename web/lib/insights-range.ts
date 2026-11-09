@@ -2,6 +2,13 @@ import { addDays } from "./weeks";
 
 export type Preset = "7" | "30" | "90" | "custom";
 export type View = "daily" | "weekly";
+/** Which easy runs the efficiency chart shows, by distance. */
+export type Distance = "all" | "5-10" | "10-16";
+export const DISTANCES: { value: Distance; label: string }[] = [
+  { value: "all", label: "All distances" },
+  { value: "5-10", label: "5 to 10 km" },
+  { value: "10-16", label: "10 to 16 km" },
+];
 
 export type InsightsRange = {
   preset: Preset;
@@ -9,6 +16,7 @@ export type InsightsRange = {
   to: string; // last day, yyyy-mm-dd
   days: number; // how many days from..to, both included
   view: View;
+  dist: Distance;
   notice: string | null; // set when what was asked for was not valid and we fell back
 };
 
@@ -39,14 +47,16 @@ function daysBetween(from: string, to: string): number {
  * Anything not valid falls back to the last 7 days and says why in `notice`. The last day is never in the future.
  */
 export function parseInsightsRange(
-  params: { range?: Param; from?: Param; to?: Param; view?: Param },
+  params: { range?: Param; from?: Param; to?: Param; view?: Param; dist?: Param },
   today: string,
 ): InsightsRange {
   const view: View = first(params.view) === "weekly" ? "weekly" : "daily";
   const range = first(params.range);
+  const d = first(params.dist);
+  const dist: Distance = d === "5-10" || d === "10-16" ? d : "all";
 
   const preset = (n: 7 | 30 | 90): InsightsRange => ({
-    preset: String(n) as Preset, from: addDays(today, -(n - 1)), to: today, days: n, view, notice: null,
+    preset: String(n) as Preset, from: addDays(today, -(n - 1)), to: today, days: n, view, dist, notice: null,
   });
   const fallback = (notice: string): InsightsRange => ({ ...preset(7), notice });
 
@@ -61,11 +71,11 @@ export function parseInsightsRange(
   if (from > end) return fallback("The start date was after the end date, so this shows the last 7 days.");
   const days = daysBetween(from, end);
   if (days > MAX_SPAN_DAYS) return fallback(`A custom range can be at most ${MAX_SPAN_DAYS} days, so this shows the last 7 days.`);
-  return { preset: "custom", from, to: end, days, view, notice: null };
+  return { preset: "custom", from, to: end, days, view, dist, notice: null };
 }
 
 /** Address for a link that keeps the current range and changes only what is passed in. */
-export function insightsHref(range: InsightsRange, change: { preset?: Preset; view?: View }): string {
+export function insightsHref(range: InsightsRange, change: { preset?: Preset; view?: View; dist?: Distance }): string {
   const preset = change.preset ?? range.preset;
   const q = new URLSearchParams({ range: preset });
   if (preset === "custom") {
@@ -73,5 +83,7 @@ export function insightsHref(range: InsightsRange, change: { preset?: Preset; vi
     q.set("to", range.to);
   }
   q.set("view", change.view ?? range.view);
+  const dist = change.dist ?? range.dist;
+  if (dist !== "all") q.set("dist", dist);
   return `/insights?${q.toString()}`;
 }
