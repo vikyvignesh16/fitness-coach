@@ -23,7 +23,18 @@ Facts below were checked against COROS's docs and the live server on 2026-11-02.
 * `querySportRecords(startDate, endDate, sportTypeCodes, limit)`: dates are yyyyMMdd. Run codes are 100 to 103 (100 is a normal run). Strength is 402.
 * The result is text inside a JSON string, with escaped newlines. `ingest/coros_runs.parse_sport_records` decodes it, checks its count against the "(N records)" header, and fails loudly if a field is missing. Do not loosen those checks.
 * Each record has a `LabelId` (the activity id), start and end Unix timestamps in seconds (UTC), distance, time, pace, heart rate and calories.
-* More tools exist for later: `getActivityDetail`, `queryActivityLapData` (need labelId and sportType), `querySleepHrv` (max 7 days), `queryDailyHealthData`, `queryRecoveryStatus`, `queryTrainingLoadAssessment`, `queryFitnessAssessmentOverview` (VO2max, race predictions). Their output formats are unverified. Look at one real response before writing a parser.
+* More tools exist: `getActivityDetail`, `queryActivityLapData` (need labelId and sportType). Health tools below were called for real on 2026-11-09 (task 2 of the dashboard work). All answers are text inside a JSON string, like `querySportRecords`. Parsers must fail loudly if a line is missing.
+
+## Health tools (VERIFIED 2026-11-09, read only)
+* `querySleepOverview(startDate, endDate)`: one block per wake-up day. Fields: Sleep Score, Daily Sleep (incl. naps), Main Sleep (asleep), Main Sleep Period (incl. awake), Deep/Light/REM/Awake **ratios in percent**, Awake Time, Awake Count, Main Sleep Window, Naps Total. **Days with no sleep recorded say `Sleep Score: 0` and "Sleep detail for this day is not available yet." Treat that as missing, never as a score of zero.** History went back to 2026-08-27 when asked for 120 days. Today's entry can be partial (the night is still being recorded).
+* `querySleepHrv(startDate, endDate)`: max 7 days per call, but any past window works (checked 60 days back). Per wake-up day: HRV Avg (ms), a label (Low, Below normal, Normal), **Normal Range and Baseline for that date** (they shift day to day), then a raw series with a point about every 10 minutes (timestamp, hrv, status, confidence). "No data" days exist.
+* `queryRecoveryStatus()`: current only. Text: `Recovery: 96%`, `Level: Fresh`, `Estimated Full Recovery: 15h`. No history, so we must save it ourselves.
+* `queryDailyHealthData(days)`: per day Steps, Calories, Exercise minutes, Stress avg, and a Sleep Summary in **minutes** (Total, Deep, Light, REM, Awake) plus Sleep HR avg/min/max. Header has the current Resting HR and HRV Baseline. Went back to 2026-07-13 for 120 days. Days with no data are missing or show zeros (zero steps there means no watch data, not a real zero).
+* `queryRestingHeartRate(days)`: one line per day, `55 bpm` or `No data`. Back to 2026-08-27.
+* `queryAvgHeartRate(startDate, endDate)`: all-day average with Min and Max. This is not resting heart rate.
+* `queryStressLevel(days)`: Average Stress per day. The Relaxed/Low/Medium/High split said `No data` every day. Back to 2026-08-27.
+* `queryTrainingLoadAssessment(days)`: per day `Comment` (Performance, Maintaining, Optimized, Resuming, Decreasing), `Short-Term Load`, `Long-Term Load`, `Load Ratio`. **Capped at about 30 days of history** even when 120 is asked. It does NOT give a per day training load total.
+* `queryFitnessAssessmentOverview()`: current only. VO2max, Running Level, Threshold Pace (`3:57 /km`), 5 km, 10 km, Half Marathon and Marathon predictions. No history, so we must save it.
 * FIT file download is limited to 50 files per day.
 
 ## Writing to the watch (needs Vicky's approval every time)
