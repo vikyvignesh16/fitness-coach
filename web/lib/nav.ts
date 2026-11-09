@@ -3,6 +3,7 @@ export const TABS = [
   { href: "/runs", label: "Runs", icon: "runs" },
   { href: "/gym", label: "Gym", icon: "gym" },
   { href: "/food", label: "Food", icon: "food" },
+  { href: "/insights", label: "Insights", icon: "insights" },
   { href: "/chat", label: "Chat", icon: "chat" },
 ] as const;
 
@@ -19,4 +20,11 @@ export function isActiveTab(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/runs" && (pathname === "/calendar" || pathname.startsWith("/calendar/"))) return true; // the calendar belongs to Runs
   return pathname === href || pathname.startsWith(href + "/");
+}
+
+/** Pages that use the full width on a laptop. Everything else keeps a readable column. */
+const WIDE_PAGES = ["/", "/insights"];
+
+export function isWidePage(pathname: string): boolean {
+  return WIDE_PAGES.some((p) => (p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(p + "/")));
 }

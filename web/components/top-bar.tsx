@@ -15,7 +15,7 @@ import { MENU_LINKS } from "@/lib/nav";
 
 export function TopBar() {
   return (
-    <header className="bg-background/95 sticky top-0 z-10 border-b pt-[env(safe-area-inset-top)] backdrop-blur">
+    <header className="bg-background/95 lg:hidden sticky top-0 z-10 border-b pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="mx-auto flex max-w-2xl items-center justify-between px-4">
         <span className="text-sm font-semibold tracking-wide">ATHLETE</span>
         <DropdownMenu>

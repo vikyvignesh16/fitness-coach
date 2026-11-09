@@ -1,29 +1,22 @@
 "use client";
 
-import { Dumbbell, Footprints, House, MessageCircle, Utensils, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { TAB_ICONS } from "@/components/tab-icons";
 import { isActiveTab, TABS } from "@/lib/nav";
 
-const ICONS: Record<(typeof TABS)[number]["icon"], LucideIcon> = {
-  home: House,
-  runs: Footprints,
-  gym: Dumbbell,
-  food: Utensils,
-  chat: MessageCircle,
-};
-
+/** Phone only. On a laptop the sidebar takes over (see sidebar.tsx). */
 export function BottomTabs() {
   const pathname = usePathname();
   return (
     <nav
       aria-label="Main"
-      className="bg-card fixed inset-x-0 bottom-0 z-20 border-t pb-[env(safe-area-inset-bottom)]"
+      className="bg-card fixed inset-x-0 bottom-0 z-20 border-t pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      <ul className="mx-auto grid max-w-2xl grid-cols-5">
+      <ul className="mx-auto grid max-w-2xl grid-cols-6">
         {TABS.map((tab) => {
           const active = isActiveTab(pathname, tab.href);
-          const Icon = ICONS[tab.icon];
+          const Icon = TAB_ICONS[tab.icon];
           return (
             <li key={tab.href}>
               <Link

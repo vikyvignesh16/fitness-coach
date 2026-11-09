@@ -74,6 +74,7 @@ export default async function HomePage() {
         </p>
       </section>
 
+      <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
           <CardDescription>Week {week.week} · {week.phase}</CardDescription>
@@ -127,7 +128,7 @@ export default async function HomePage() {
         </CardHeader>
       </Card>
 
-      <Card>
+      <Card className="lg:col-span-2">
         <CardHeader>
           <CardTitle>Weekly distance</CardTitle>
           <CardDescription>Planned and done, all 23 weeks.</CardDescription>
@@ -136,6 +137,7 @@ export default async function HomePage() {
           <WeeklyChart data={series} />
         </CardContent>
       </Card>
+      </div>
     </>
   );
 }

@@ -246,3 +246,20 @@ Coaching notes: stored in plan_days.coaching_notes and shown on the workout page
 Guard rails: the draft table has no insert or update policy for the app, so only the check job (service role) can write drafts and only the function can decide them. The function refuses a draft that has errors, was already decided, or belongs to someone else. The page and banner never fail if the table is missing.
 Notes never go to COROS (Vicky's decision): the watch description is built from the steps only. The plan's run notes can mention ankle symptoms and are for the web app. This also removes the length worry, since v5.7's notes are up to 621 characters. ingest/watch_course.to_course no longer appends run.notes, and a test proves a note never appears in the description. The checker still warns if the step text itself is long.
 Alternatives: re-pointing unsent approvals to the new version (rejected: she would send a workout she has not seen); letting the app write the version rows itself (rejected: not atomic).
+
+## 2026-11-09 One app, two layouts (phone and laptop), and a sixth tab called Insights
+Chose: the layout follows screen width. Under 1024px it is the phone layout (top bar, one narrow column, tabs along the bottom). From 1024px up it is a left sidebar with the same tabs plus the menu links and Sign out, and the top bar and bottom tabs are hidden. Home and Insights use the full width (up to about 1150px, with Home cards in two columns). Every other page keeps a readable column (about 770px). Which pages are wide is one list, WIDE_PAGES in web/lib/nav.ts. The tab icons are shared (components/tab-icons.ts), and a test checks the sidebar and the bottom tabs show the same tabs in the same order.
+Why: Vicky uses the app on her iPhone and on her laptop. The dashboard plan wants two charts per row on a wide screen.
+Alternatives: separate phone and laptop sites (rejected: two copies drift apart); widening only the Insights page (rejected: she uses both devices all the time); detecting the device (rejected: the window width is what matters, and a narrow laptop window should show the phone layout).
+Cost: one more component to keep in step with the bottom tabs. The page pass is by reading the code and the build. It was not checked in a browser by me, because every page is behind the login.
+Also: a sixth tab, Insights, sits before Chat. Its page says "coming soon" until the dashboard is built. The app is dark only (dark is fixed on the page), so there is no light mode to check.
+Revisit when: a page looks cramped or stretched on a laptop.
+Status: open
+
+## 2026-11-09 One Git branch per task, merged to main only after Vicky approves
+Chose: each task in the to do list gets its own branch (task-NN-short-name). Small commits go on the branch. When Vicky approves the task, it is merged into main, and only then pushed. Pushing main deploys to Railway, so main always holds approved work.
+Why: Railway deploys whatever is on main, so a push is a release. Vicky approves one task at a time, and a branch per task matches that. A bad task can be thrown away without touching the live app.
+Alternatives: committing straight to main (what we did until now: every push goes live); pull requests on GitHub for every task (kept for later: an extra step, but a readable record of each task).
+Cost: a few extra git commands per task.
+Revisit when: pull requests would help, for example if a second person ever helps.
+Status: confirmed
