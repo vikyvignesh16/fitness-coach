@@ -1,3 +1,4 @@
+import { HowToRead } from "@/components/insights/how-to-read";
 import { KpiCard } from "@/components/insights/kpi-card";
 import { RangeControls } from "@/components/insights/range-controls";
 import { loadInsights } from "@/lib/data";
@@ -27,6 +28,8 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
       <section aria-label="Today" className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         {kpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
       </section>
+
+      <HowToRead />
 
       <RangeControls range={range} today={today} />
       <p className="text-muted-foreground text-xs">{daysWithData} of {range.days} days in this range have watch data.</p>
