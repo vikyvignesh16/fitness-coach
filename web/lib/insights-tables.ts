@@ -1,5 +1,6 @@
 import type { DataTable } from "@/components/insights/chart-card";
 import { formatMinutes } from "./insights-kpis";
+import { formatHms, formatPace, type EfficiencyPoint, type FitnessPoint, type LongRunPoint } from "./insights-fitness";
 import type { HrvPoint, LoadPoint, RhrPoint, ScorePoint, SleepPoint, VolumePoint } from "./insights-series";
 import type { View } from "./insights-range";
 
@@ -35,4 +36,19 @@ export const loadTable = (p: LoadPoint[], view: View): DataTable => ({
 export const volumeTable = (p: VolumePoint[]): DataTable => ({
   columns: ["Week starting", "Distance (km)", "Runs", "Change on last week", "4 week average (km)"],
   rows: p.map((x) => [x.label + (x.inProgress ? " (in progress)" : ""), x.km, x.runs, x.changePct === null ? null : `${x.changePct > 0 ? "+" : ""}${x.changePct}%`, x.avg4]),
+});
+
+export const longRunTable = (p: LongRunPoint[]): DataTable => ({
+  columns: ["Week starting", "Longest run (km)", "Time", "Pace (min/km)", "Avg heart rate", "Runs that week"],
+  rows: p.map((x) => [x.label, x.km, x.durationS === null ? null : formatHms(x.durationS), x.paceS === null ? null : formatPace(x.paceS), x.avgHr, x.runsThatWeek]),
+});
+
+export const fitnessTable = (p: FitnessPoint[], view: View): DataTable => ({
+  columns: [first(view), "VO2max", "Threshold pace (min/km)", "Marathon prediction"],
+  rows: p.map((x) => [x.label, x.vo2max, x.thresholdS === null ? null : formatPace(x.thresholdS), x.marathonS === null ? null : formatHms(x.marathonS)]),
+});
+
+export const efficiencyTable = (p: EfficiencyPoint[]): DataTable => ({
+  columns: ["Date", "Distance (km)", "Avg heart rate", "Pace (min/km)"],
+  rows: p.map((x) => [x.label, x.km, x.hr, formatPace(x.paceS)]),
 });

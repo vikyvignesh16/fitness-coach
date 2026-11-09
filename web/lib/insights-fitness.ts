@@ -1,4 +1,4 @@
-import type { Distance, InsightsRange, View } from "./insights-range";
+import type { Distance, InsightsRange } from "./insights-range";
 import type { Slot } from "./insights-series";
 import { localDate } from "./runs";
 import type { HealthDay, RunRow } from "./types";
@@ -84,7 +84,7 @@ function lastOf(rows: Map<string, HealthDay>, slot: Slot, pick: (r: HealthDay) =
 }
 
 /** COROS only gives today's fitness numbers, so each day we have is one saved value. Weekly takes the newest in the week. */
-export function fitnessSeries(rows: HealthDay[], slots: Slot[], _view: View): FitnessPoint[] {
+export function fitnessSeries(rows: HealthDay[], slots: Slot[]): FitnessPoint[] {
   const map = new Map(rows.map((r) => [r.day, r]));
   const pts = slots.map((s) => ({
     key: s.key, label: s.label,

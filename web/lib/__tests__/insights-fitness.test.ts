@@ -52,21 +52,21 @@ describe("fitness series", () => {
   const slots = buildSlots({ from: "2026-11-03", to: "2026-11-09" }, "daily");
 
   it("shows the one value COROS gave and nothing for the other days", () => {
-    const pts = fitnessSeries([row("2026-11-09", { vo2max: 50, threshold_pace_s: 237, pred_marathon_s: 11191 })], slots, "daily");
+    const pts = fitnessSeries([row("2026-11-09", { vo2max: 50, threshold_pace_s: 237, pred_marathon_s: 11191 })], slots);
     expect(pts.filter((p) => p.vo2max !== null)).toHaveLength(1);
     expect(pts[6]).toMatchObject({ vo2max: 50, thresholdS: 237, marathonS: 11191, isolated: true });
     expect(pts[0]).toMatchObject({ vo2max: null, isolated: false });
   });
 
   it("two days in a row are a line, so neither needs a dot", () => {
-    const pts = fitnessSeries([row("2026-11-08", { vo2max: 50 }), row("2026-11-09", { vo2max: 51 })], slots, "daily");
+    const pts = fitnessSeries([row("2026-11-08", { vo2max: 50 }), row("2026-11-09", { vo2max: 51 })], slots);
     expect(pts[5].isolated).toBe(false);
     expect(pts[6].isolated).toBe(false);
   });
 
   it("weekly takes the newest value in the week", () => {
     const weekly = buildSlots({ from: "2026-11-02", to: "2026-11-08" }, "weekly");
-    expect(fitnessSeries([row("2026-11-03", { vo2max: 49 }), row("2026-11-07", { vo2max: 50 })], weekly, "weekly")[0].vo2max).toBe(50);
+    expect(fitnessSeries([row("2026-11-03", { vo2max: 49 }), row("2026-11-07", { vo2max: 50 })], weekly)[0].vo2max).toBe(50);
   });
 });
 

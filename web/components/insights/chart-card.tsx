@@ -8,12 +8,13 @@ export type DataTable = { columns: string[]; rows: (string | number | null)[][] 
  * The frame every Insights chart sits in: a title, a line saying what the chart is for, the chart, and the same
  * numbers as a table. An empty cell says "no data", because missing is not the same as zero.
  */
-export function ChartCard({ title, purpose, hasData, table, howTo, children }: {
+export function ChartCard({ title, purpose, hasData, table, howTo, controls, children }: {
   title: string;
   purpose: string;
   hasData: boolean;
   table: DataTable;
   howTo?: HowTo;
+  controls?: ReactNode; // shown even when there is no data, so a filter can be undone
   children?: ReactNode;
 }) {
   return (
@@ -23,6 +24,7 @@ export function ChartCard({ title, purpose, hasData, table, howTo, children }: {
         <CardDescription>{purpose}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {controls}
         {hasData ? children : <p className="text-muted-foreground py-6 text-center text-sm">No data in this range.</p>}
         {howTo && (
           <details className="text-sm">

@@ -35,4 +35,29 @@ export const HOW_TO = {
     picture: "It is a backpack. Orange is the weight you are used to carrying. Blue is what you are carrying this week.",
     example: "Sam's blue line climbs above the orange line for two weeks, so the pack is heavier than usual. When blue drops back under orange, the pack is lighter, which is normal in a rest or easy week. How far apart the lines get matters more than which one is on top.",
   },
+  longrun: {
+    look: "Each green column is the longest run of that week. Weeks with no run have no column.",
+    picture: "It is the longest leg of the road trip each week. Marathon training usually stretches this leg a little at a time, with easier weeks in between.",
+    example: "Sam's long runs go 14, 16, 18 and then 26 kilometres. That last column is a big jump after a steady climb, so it is the one to look at twice. The plan has its own limits on jumps like this.",
+  },
+  vo2: {
+    look: "The line is your VO2max, which is COROS's estimate of how much oxygen your body can use. It is a measure of aerobic fitness.",
+    picture: "It is the size of the engine. It grows slowly, over weeks and months, so look at the direction and not at one reading.",
+    example: "Sam's line goes 48, then 49, then 50 over a couple of months. A slightly bigger engine, slowly. COROS only tells us today's number, so this chart starts when the app began saving it and fills in as days pass.",
+  },
+  threshold: {
+    look: "The line is your threshold pace, which is roughly the fastest pace you could hold for a long, hard effort. Faster paces are higher up, so a rising line means improving.",
+    picture: "It is the speed you can hold without the engine overheating.",
+    example: "Sam's line drifts from 4:10 a kilometre to 4:00 over a few months. Sam can now hold a quicker pace before the engine starts to overheat. Like VO2max, this only moves slowly.",
+  },
+  marathon: {
+    look: "The purple line is COROS's predicted marathon time. The dashed grey lines are your three goals. Faster times are higher up.",
+    picture: "It is the arrival time on the car's satnav. The satnav guesses from your recent runs and your fitness, and it does not know about the weather, the hills or whether you will run out of fuel.",
+    example: "Sam's goal A is 3:15 and the satnav says 3:06. The tooltip shows that as a gap, 9 minutes faster than the goal. Watch predictions can be optimistic, so Sam treats it as a rough guide and not a promise.",
+  },
+  efficiency: {
+    look: "Each dot is one easy run. Going across is the average heart rate. Going up is the pace, with faster runs higher up. Colour and shape show the month, and grey rings are older runs.",
+    picture: "It is the same amount of fuel taking you further. If newer dots sit higher or further left than older ones, you are going faster for the same effort, or the same speed with a calmer heart.",
+    example: "Sam's September runs sit at about 155 beats and 6:10 a kilometre. October's sit at about 150 beats and 6:00. That is faster at a lower heart rate, which is what a more efficient engine looks like. Hills, heat, tiredness and a bad night all push a dot around, so only compare similar runs. Wrist heart rate can be off, and the chest strap will make this clearer.",
+  },
 } satisfies Record<string, HowTo>;
