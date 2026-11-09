@@ -25,3 +25,13 @@ set local role anon;
 select 'plan_proposals' as t, count(*) from plan_proposals having count(*) > 0;
 reset role;
 select 'anon can adopt' as t where has_function_privilege('anon', 'adopt_plan_proposal(uuid)', 'execute');
+
+-- 5. Watch health tables (migration 0011). All of these must return zero rows.
+--    The anon role must not read either table, and a signed in user must not be able to change them.
+set local role anon;
+select 'health_daily' as t, count(*) from health_daily having count(*) > 0
+union all select 'recovery_snapshots', count(*) from recovery_snapshots having count(*) > 0;
+reset role;
+select 'authenticated can write ' || t as problem
+from (values ('health_daily'), ('recovery_snapshots')) as x(t), unnest(array['insert', 'update', 'delete']) as p
+where has_table_privilege('authenticated', x.t, p);
