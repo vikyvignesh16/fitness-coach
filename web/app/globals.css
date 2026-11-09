@@ -137,3 +137,30 @@
   --series-planned: #3987e5;
   --series-actual: #d95926;
 }
+
+/* Insights chart colours: one fixed colour per metric, taken from the validated categorical palette
+   (dataviz skill). The dark steps were checked against the app's dark card colour. */
+:root {
+  --m-deep: #2a78d6;
+  --m-rem: #eb6834;
+  --m-light: #1baf7a;
+  --m-awake: #eda100;
+  --m-score: #6250d6;
+  --m-hrv: #1baf7a;
+  --m-rhr: #e87ba4;
+  --m-volume: #008300;
+  --m-load-short: #2a78d6;
+  --m-load-long: #eb6834;
+}
+.dark {
+  --m-deep: #3987e5;
+  --m-rem: #d95926;
+  --m-light: #199e70;
+  --m-awake: #c98500;
+  --m-score: #9085e9;
+  --m-hrv: #199e70;
+  --m-rhr: #d55181;
+  --m-volume: #008300;
+  --m-load-short: #3987e5;
+  --m-load-long: #d95926;
+}
