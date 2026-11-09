@@ -256,3 +256,20 @@ Alternatives: one raw log table for every pull (rejected: size); adding the job 
 Cost: sleep stage minutes come from the daily health tool and the sleep times from the sleep overview, so a night needs both to be complete. Sleep window times are read as Paris time, so a night slept abroad can be off by the time difference.
 Revisit when: COROS changes a format (the job will fail loudly) or the stored times look wrong after a trip.
 Status: open
+
+## 2026-11-09 One app, two layouts (phone and laptop), and a sixth tab called Insights
+Chose: the layout follows screen width. Under 1024px it is the phone layout (top bar, one narrow column, tabs along the bottom). From 1024px up it is a left sidebar with the same tabs plus the menu links and Sign out, and the top bar and bottom tabs are hidden. Home and Insights use the full width (up to about 1150px, with Home cards in two columns). Every other page keeps a readable column (about 770px). Which pages are wide is one list, WIDE_PAGES in web/lib/nav.ts. The tab icons are shared (components/tab-icons.ts), and a test checks the sidebar and the bottom tabs show the same tabs in the same order.
+Why: Vicky uses the app on her iPhone and on her laptop. The dashboard plan wants two charts per row on a wide screen.
+Alternatives: separate phone and laptop sites (rejected: two copies drift apart); widening only the Insights page (rejected: she uses both devices all the time); detecting the device (rejected: the window width is what matters, and a narrow laptop window should show the phone layout).
+Cost: one more component to keep in step with the bottom tabs. The page pass is by reading the code and the build. It was not checked in a browser by me, because every page is behind the login.
+Also: a sixth tab, Insights, sits before Chat. Its page says "coming soon" until the dashboard is built. The app is dark only (dark is fixed on the page), so there is no light mode to check.
+Revisit when: a page looks cramped or stretched on a laptop.
+Status: open
+
+## 2026-11-09 One Git branch per task, merged to main only after Vicky approves
+Chose: each task in the to do list gets its own branch (task-NN-short-name). Small commits go on the branch. When Vicky approves the task, it is merged into main, and only then pushed. Pushing main deploys to Railway, so main always holds approved work.
+Why: Railway deploys whatever is on main, so a push is a release. Vicky approves one task at a time, and a branch per task matches that. A bad task can be thrown away without touching the live app.
+Alternatives: committing straight to main (what we did until now: every push goes live); pull requests on GitHub for every task (kept for later: an extra step, but a readable record of each task).
+Cost: a few extra git commands per task.
+Revisit when: pull requests would help, for example if a second person ever helps.
+Status: confirmed

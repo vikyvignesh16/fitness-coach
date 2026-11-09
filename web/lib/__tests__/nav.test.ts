@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { isActiveTab, MENU_LINKS, TABS } from "../nav";
+import { isActiveTab, isWidePage, MENU_LINKS, TABS } from "../nav";
 
 describe("isActiveTab", () => {
   it("lights Home only on the home page", () => {
@@ -39,7 +39,20 @@ describe("navigation points at real pages", () => {
     for (const l of MENU_LINKS) expect(existsSync(pageFor(l.href)), l.href).toBe(true);
   });
 
-  it("keeps the bar to five tabs so it fits a phone", () => {
-    expect(TABS).toHaveLength(5);
+  it("keeps the bar to six tabs so it fits a phone", () => {
+    expect(TABS).toHaveLength(6);
+  });
+});
+
+describe("isWidePage", () => {
+  it("gives Home and Insights the full laptop width", () => {
+    expect(isWidePage("/")).toBe(true);
+    expect(isWidePage("/insights")).toBe(true);
+  });
+
+  it("keeps every other page to a readable column", () => {
+    for (const p of ["/runs", "/runs/abc", "/plan/2026-11-10", "/gym", "/checkin", "/approve", "/insightsx"]) {
+      expect(isWidePage(p), p).toBe(false);
+    }
   });
 });
