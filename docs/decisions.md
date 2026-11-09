@@ -281,3 +281,12 @@ Alternatives: client side state for the range (rejected: not bookmarkable, needs
 Cost: a form submit reloads the page when custom dates change.
 Revisit when: charts feel slow to reload on every range change.
 Status: open
+
+## 2026-11-09 Insights charts: one axis each, gaps stay gaps, colour per metric, COROS's own load numbers
+Chose: six charts on Insights (sleep stages, sleep score, HRV with the COROS normal range band, resting heart rate, weekly running distance, short-term against long-term load), drawn with Recharts like the existing weekly chart. The data for each chart is worked out by plain tested functions (web/lib/insights-series.ts), the charts only draw it. Each chart has one vertical axis. A night or day with no data is a gap in the line or no column, never a zero. A lone point (no neighbour on either side) gets a dot, because a line cannot show it. Sleep score nights more than 1.5 standard deviations under the previous 28 days (at least 5 nights needed) get a hollow marker. That is a display marker, not advice. Weekly view shows the average per week, except load (newest value in the week) and distance (always weekly). The week in progress is drawn lighter and is not compared with full weeks.
+Colours: one fixed colour per metric, from the validated categorical palette in the dataviz skill (blue, orange, aqua, yellow for the four sleep stages, checked against the app's dark card colour with its validator: all checks pass). Reference lines (28 day averages, the 7 day HRV average, the 4 week distance average) are neutral grey. Every chart with two or more series has a legend, and every chart has a data table.
+Not built: chart 8 (training load per day). COROS gives no daily load total, only short-term, long-term and the ratio (chart 9 uses these). Recovery and stress charts, long runs, fitness and the scatter plots come in later steps.
+Alternatives: charting the 28 day average as a band (rejected: the spec asks for a line); a second axis for sleep score on the stage chart (rejected: one axis per chart).
+Not checked by me: how the charts look in a browser. The sign-in blocks me from opening the page, and a version that skipped the sign-in to take a picture was (rightly) blocked. Vicky checks them on the dev server.
+Revisit when: a range of 90 days makes the tick labels or columns too crowded.
+Status: open
