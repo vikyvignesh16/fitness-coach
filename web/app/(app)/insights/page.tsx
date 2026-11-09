@@ -3,6 +3,7 @@ import {
   HrvChart, LoadChart, RestingHrChart, SleepCompositionChart, SleepScoreChart, VolumeChart,
 } from "@/components/insights/charts";
 import { HowToRead } from "@/components/insights/how-to-read";
+import { HOW_TO } from "@/lib/insights-howto";
 import { KpiCard } from "@/components/insights/kpi-card";
 import { RangeControls } from "@/components/insights/range-controls";
 import { loadInsights, loadRuns } from "@/lib/data";
@@ -61,19 +62,19 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
         <SectionHead title="Sleep and recovery" note="Sleep, HRV and resting heart rate. Recovery and stress charts come later." />
         <div className="grid gap-4 lg:grid-cols-2">
           <ChartCard title="Sleep stages" purpose={`How long you slept each ${unit}, and how it splits into deep, REM, light and awake.`}
-            hasData={sleep.some((p) => p.asleepMin !== null || p.deep !== null)} table={sleepTable(sleep, view)}>
+            hasData={sleep.some((p) => p.asleepMin !== null || p.deep !== null)} table={sleepTable(sleep, view)} howTo={HOW_TO.sleep}>
             <SleepCompositionChart data={sleep} />
           </ChartCard>
           <ChartCard title="Sleep score" purpose="The COROS score for each night against your own 28 day average."
-            hasData={score.some((p) => p.score !== null)} table={scoreTable(score, view)}>
+            hasData={score.some((p) => p.score !== null)} table={scoreTable(score, view)} howTo={HOW_TO.score}>
             <SleepScoreChart data={score} />
           </ChartCard>
           <ChartCard title="HRV" purpose="Is your nightly HRV inside your normal range, and which way is it heading?"
-            hasData={hrv.some((p) => p.hrv !== null)} table={hrvTable(hrv, view)}>
+            hasData={hrv.some((p) => p.hrv !== null)} table={hrvTable(hrv, view)} howTo={HOW_TO.hrv}>
             <HrvChart data={hrv} />
           </ChartCard>
           <ChartCard title="Resting heart rate" purpose="A resting heart rate that stays above your own average can mean your body is working harder."
-            hasData={rhr.some((p) => p.rhr !== null)} table={rhrTable(rhr, view)}>
+            hasData={rhr.some((p) => p.rhr !== null)} table={rhrTable(rhr, view)} howTo={HOW_TO.rhr}>
             <RestingHrChart data={rhr} />
           </ChartCard>
         </div>
@@ -83,11 +84,11 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
         <SectionHead title="Training load and volume" note="Weekly distance and COROS training load. Long runs come later." />
         <div className="grid gap-4 lg:grid-cols-2">
           <ChartCard title="Weekly running distance" purpose="Kilometres per week from your watch runs, with the 4 week average."
-            hasData={volume.some((p) => p.km > 0)} table={volumeTable(volume)}>
+            hasData={volume.some((p) => p.km > 0)} table={volumeTable(volume)} howTo={HOW_TO.volume}>
             <VolumeChart data={volume} />
           </ChartCard>
           <ChartCard title="Short-term and long-term load" purpose="Is recent training heavier or lighter than what you are used to? COROS keeps about 30 days of this."
-            hasData={load.some((p) => p.short !== null || p.long !== null)} table={loadTable(load, view)}>
+            hasData={load.some((p) => p.short !== null || p.long !== null)} table={loadTable(load, view)} howTo={HOW_TO.load}>
             <LoadChart data={load} />
           </ChartCard>
         </div>

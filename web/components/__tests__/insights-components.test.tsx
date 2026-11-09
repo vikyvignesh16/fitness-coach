@@ -50,6 +50,14 @@ describe("ChartCard", () => {
     expect(within(rows[2]).queryByText("0")).toBeNull();
   });
 
+  it("offers a how to read guide with a picture and an example, closed until opened", () => {
+    const howTo = { look: "Look here.", picture: "A car.", example: "Sam sleeps badly." };
+    const { container } = render(<ChartCard title="HRV" purpose="p" hasData table={table} howTo={howTo}><div /></ChartCard>);
+    expect(screen.getByText("How to read this chart")).toBeInTheDocument();
+    expect(screen.getByText(/Sam sleeps badly/)).toBeInTheDocument();
+    expect(container.querySelectorAll("details")[0]).not.toHaveAttribute("open");
+  });
+
   it("says so when the range has no data", () => {
     render(<ChartCard title="HRV" purpose="p" hasData={false} table={table}><div>the chart</div></ChartCard>);
     expect(screen.getByText("No data in this range.")).toBeInTheDocument();
