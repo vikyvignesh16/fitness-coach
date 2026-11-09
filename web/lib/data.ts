@@ -5,9 +5,11 @@ import { lockedWeeks } from "@/lib/gates";
 import { sessionProgress, type HistorySet, type LoggedSet, type PlannedExercise } from "@/lib/gym";
 import { isRestDay } from "@/lib/labels";
 import { runState, upcomingRuns, waitingCount, type ApprovalRow, type RunState, type UpcomingRun } from "@/lib/watch-approve";
-import { checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLocal } from "@/lib/weeks";
+import { addDays, checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLocal } from "@/lib/weeks";
 import { diffPlans, notesAdded, watchImpact, type DayChange, type DraftPlan } from "@/lib/proposal-diff";
-import type { PlanDay, PlanWeek, RunRow } from "@/lib/types";
+import type { HealthDay, PlanDay, PlanWeek, RecoverySnapshot, RunRow } from "@/lib/types";
+import { BASELINE_DAYS } from "@/lib/insights-kpis";
+import type { InsightsRange } from "@/lib/insights-range";
 
 import { ANKLE_GATE_ID } from "@/lib/gate-record";
 
@@ -442,5 +444,41 @@ export async function loadProposal(): Promise<ProposalPage | null> {
     changes,
     notesAdded: notesAdded(current, plan),
     impact: watchImpact(changes, approvals.data ?? []),
+  };
+}
+
+
+const HEALTH_COLUMNS = [
+  "day", "sleep_score", "sleep_asleep_min", "sleep_total_min", "sleep_period_min", "sleep_deep_min", "sleep_light_min",
+  "sleep_rem_min", "sleep_awake_min", "sleep_nap_min", "hrv_avg_ms", "hrv_label", "hrv_normal_low_ms", "hrv_normal_high_ms",
+  "hrv_baseline_ms", "resting_hr", "hr_avg", "stress_avg", "steps", "exercise_min", "load_short", "load_long", "load_ratio",
+  "load_label", "recovery_avg", "recovery_min", "recovery_max", "recovery_last", "vo2max", "running_level",
+  "threshold_pace_s", "pred_5k_s", "pred_10k_s", "pred_half_s", "pred_marathon_s", "complete",
+].join(", ");
+
+/** How far back the top cards look for the newest real value of each metric. */
+const KPI_LOOKBACK_DAYS = 60;
+
+export type InsightsData = {
+  kpiRows: HealthDay[]; // the last 60 days, for the cards at the top
+  rows: HealthDay[]; // the chosen range plus 28 days before it, for baselines
+  snapshot: RecoverySnapshot | null; // the newest recovery status
+};
+
+/** Watch health numbers for the Insights page. Read with the signed in user's session, so RLS applies. */
+export async function loadInsights(range: InsightsRange, today: string): Promise<InsightsData> {
+  const supabase = await createClient();
+  const [kpi, inRange, snap] = await Promise.all([
+    supabase.from("health_daily").select(HEALTH_COLUMNS).gte("day", addDays(today, -KPI_LOOKBACK_DAYS)).order("day"),
+    supabase.from("health_daily").select(HEALTH_COLUMNS).gte("day", addDays(range.from, -BASELINE_DAYS)).lte("day", range.to).order("day"),
+    supabase.from("recovery_snapshots").select("taken_at, recovery_pct, level, full_recovery_h").order("taken_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  if (kpi.error) throw new Error(`Could not read health data: ${kpi.error.message}`);
+  if (inRange.error) throw new Error(`Could not read health data: ${inRange.error.message}`);
+  if (snap.error) throw new Error(`Could not read recovery status: ${snap.error.message}`);
+  return {
+    kpiRows: kpi.data as unknown as HealthDay[],
+    rows: inRange.data as unknown as HealthDay[],
+    snapshot: snap.data as RecoverySnapshot | null,
   };
 }

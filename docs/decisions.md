@@ -273,3 +273,11 @@ Alternatives: committing straight to main (what we did until now: every push goe
 Cost: a few extra git commands per task.
 Revisit when: pull requests would help, for example if a second person ever helps.
 Status: confirmed
+
+## 2026-11-09 Insights page: range in the address, cards from the newest real value, no combined score
+Chose: the Insights page reads its date range from the address (?range=7|30|90|custom, ?from=, ?to=, ?view=daily|weekly), so a view can be bookmarked and the page stays a server component. Custom ranges are capped at 180 days, the end is never in the future, and anything invalid falls back to 7 days with a visible note. The six cards at the top show the newest real value of each metric (not the range), with the date it was measured, and say "No data yet" when there is none. Baselines are the average of the 28 days before the day, ignoring empty days, and need at least 5 values. There is no combined readiness score. Every chart sits in one ChartCard with a data table, and a missing value shows as "no data", never zero.
+Why: this follows Vicky's dashboard spec. The metrics update at different times, so each card says when it was measured. A gap in the watch data must not pull an average down or look like a zero.
+Alternatives: client side state for the range (rejected: not bookmarkable, needs JavaScript before anything shows); one readiness score (rejected in the spec: it hides which metric moved); a charting page per metric.
+Cost: a form submit reloads the page when custom dates change.
+Revisit when: charts feel slow to reload on every range change.
+Status: open
