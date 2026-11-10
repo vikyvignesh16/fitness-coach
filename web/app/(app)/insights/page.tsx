@@ -1,4 +1,5 @@
 import { RecoveryChart, RecoveryToday, StressChart, LoadPerSlotChart } from "@/components/insights/activity-charts";
+import { WorkoutHistory } from "@/components/insights/workout-history";
 import { LoadKindFilter } from "@/components/insights/load-kind-filter";
 import { ChartCard } from "@/components/insights/chart-card";
 import {
@@ -10,7 +11,7 @@ import { HowToRead } from "@/components/insights/how-to-read";
 import { HOW_TO } from "@/lib/insights-howto";
 import { KpiCard } from "@/components/insights/kpi-card";
 import { RangeControls } from "@/components/insights/range-controls";
-import { loadFitnessContext, loadInsights, loadRuns, loadStrength } from "@/lib/data";
+import { loadFitnessContext, loadInsights, loadRuns, loadStrength, loadWorkoutRuns } from "@/lib/data";
 import { efficiencyPoints, fitnessSeries, goalsFromTargets, longRunPerWeek } from "@/lib/insights-fitness";
 import { buildKpis } from "@/lib/insights-kpis";
 import { parseInsightsRange } from "@/lib/insights-range";
@@ -19,11 +20,7 @@ import {
 } from "@/lib/insights-series";
 import { efficiencyTable, fitnessTable, hrvTable, loadPerSlotTable, loadTable, longRunTable, recoveryTable, rhrTable, scoreTable, sleepTable, stressTable, volumeTable } from "@/lib/insights-tables";
 import { todayLocal } from "@/lib/weeks";
-
-// Sections that still wait for their charts (the later steps of the plan).
-const LATER = [
-  { title: "Workout history and insights", note: "Your workouts with notes, and how recovery and training relate." },
-];
+import { buildWorkoutRows, ROWS_SHOWN } from "@/lib/workout-table";
 
 const SectionHead = ({ title, note }: { title: string; note: string }) => (
   <div>
@@ -35,7 +32,7 @@ const SectionHead = ({ title, note }: { title: string; note: string }) => (
 export default async function InsightsPage(props: PageProps<"/insights">) {
   const today = todayLocal();
   const range = parseInsightsRange(await props.searchParams, today);
-  const [{ kpiRows, rows, snapshot, todaySnapshots }, runs, plan, strength] = await Promise.all([loadInsights(range, today), loadRuns(), loadFitnessContext(), loadStrength(range.from, range.to)]);
+  const [{ kpiRows, rows, snapshot, todaySnapshots }, runs, plan, strength, tableRuns] = await Promise.all([loadInsights(range, today), loadRuns(), loadFitnessContext(), loadStrength(range.from, range.to), loadWorkoutRuns(range.from, range.to)]);
   const kpis = buildKpis(kpiRows, snapshot, today);
   const daysWithData = rows.filter((r) => r.day >= range.from && r.day <= range.to).length;
 
@@ -55,6 +52,7 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
   const recovery = recoverySeries(rows, slots, view);
   const intraday = intradayPoints(todaySnapshots, today);
   const loadDays = loadPerSlot(runs, strength, slots, range.loadKind);
+  const workouts = buildWorkoutRows({ runs: tableRuns, sessions: strength, planTypes: plan.planTypes, show: range.workouts, sort: range.sort });
   const unit = view === "daily" ? "night" : "week";
 
   return (
@@ -142,12 +140,10 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
         </div>
       </section>
 
-      {LATER.map((s) => (
-        <section key={s.title} aria-label={s.title} className="space-y-3">
-          <SectionHead title={s.title} note={s.note} />
-          <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-sm">The charts for this section arrive in a later step.</p>
-        </section>
-      ))}
+      <section aria-label="Workout history" className="space-y-3">
+        <SectionHead title="Workout history" note="Every run and gym session in this range, with how it felt and your note. Tap one to open it." />
+        <WorkoutHistory rows={range.allRows ? workouts : workouts.slice(0, ROWS_SHOWN)} range={range} total={workouts.length} />
+      </section>
 
       <p className="text-muted-foreground text-xs">Watch numbers are estimates and this is not medical advice. Persistent pain means stop and see a professional.</p>
     </>
