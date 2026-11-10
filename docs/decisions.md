@@ -340,3 +340,13 @@ Colours: stress yellow, recovery blue, running aqua and strength violet, all che
 Alternatives: a gauge for recovery (rejected in the spec); counting an unscored workout as zero load (rejected: it would make a hard week look easy).
 Revisit when: recovery has a few weeks of history, or cycling is added to the data.
 Status: open
+
+## 2026-11-10 Insights step B: the workout table
+Chose: a "Workout history" section at the bottom of Insights lists every run and gym session in the chosen date range as one row: date, what the plan called it (or your COROS name), distance or sets and weight lifted, time, pace (runs only), heart rate, training load, how it felt, and the first line of your note. On a laptop it is a table, on a phone each workout is a small card. Tapping one opens the run page or that gym day, where the whole note is. Workouts you typed in carry the "Added by you" tag. Filter by All, Running or Strength, sort by newest or highest load, and the 30 newest rows show with a "Show all N" link. All of this lives in the address (?show=, ?sort=, ?rows=all) and keeps the date range, like the other filters.
+Rules, with tests: a value COROS did not give is null and shows as "no data", never zero; a real zero load stays a zero. A workout with no load figure sorts after the ones that have one when sorting by load. A run's title is what the plan called that day, and a plain "Run" on a rest day or an unplanned day. A run's date is its Paris date. A note is shortened to its first line, cut at 90 letters. A run with no distance has no pace.
+Voice notes: COROS only gives us the note text. If a note was recorded by voice, the text we hold is COROS's own transcription, and it shows here. Nothing else can be fetched.
+Loader: reads only the range, and never throws (if it fails the table shows the gym sessions only). No database change, nothing written.
+Not checked by me: how the table looks styled, in a browser. The tests cover the logic and the text, and a drawing with the app's real styles needs a package that is not installed here.
+Alternatives: a table only (rejected: it needs sideways scrolling on a phone); showing the whole note in the table (rejected: one long note would stretch a row across the screen).
+Revisit when: you want sorting by more columns, or a search.
+Status: open

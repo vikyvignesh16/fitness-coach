@@ -9,6 +9,7 @@ import { diffPlans, notesAdded, watchImpact, type DayChange, type DraftPlan } fr
 import type { HealthDay, RunExtra, StrengthSession, PlanDay, PlanWeek, RecoverySnapshot, RunRow } from "@/lib/types";
 import { BASELINE_DAYS } from "@/lib/insights-kpis";
 import type { InsightsRange } from "@/lib/insights-range";
+import type { RunForTable } from "@/lib/workout-table";
 
 import { ANKLE_GATE_ID } from "@/lib/gate-record";
 
@@ -455,4 +456,28 @@ export async function loadGymDay(date: string): Promise<StrengthSession[] | null
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const sessions = await loadStrength(date, date);
   return sessions.length ? sessions : null;
+}
+
+
+/**
+ * The runs on the Paris days from..to, with the effort word and note the workout table shows.
+ * Never throws: if the read fails, the table shows only the gym sessions.
+ */
+export async function loadWorkoutRuns(from: string, to: string): Promise<RunForTable[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("runs")
+      .select("coros_id, started_at, distance_km, duration_s, avg_hr, training_load, perceived_effort, workout_note")
+      .gte("started_at", `${addDays(from, -1)}T00:00:00Z`)
+      .lte("started_at", `${addDays(to, 1)}T23:59:59Z`)
+      .order("started_at");
+    if (error || !data) return [];
+    return (data as unknown as RunForTable[]).filter((r) => {
+      const day = localDate(r.started_at);
+      return day >= from && day <= to;
+    });
+  } catch {
+    return [];
+  }
 }
