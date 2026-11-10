@@ -1,3 +1,5 @@
+import { AddExerciseForm, RemoveExerciseButton, RemoveWorkoutButton } from "@/components/strength-entry";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatSessionTime, sessionTotals, summariseSets } from "@/lib/strength";
 import type { StrengthSession } from "@/lib/types";
@@ -20,12 +22,16 @@ export function StrengthSessionCard({ session }: { session: StrengthSession }) {
   add("How it felt", session.perceived_effort);
   add("Focus", session.training_focus);
   const note = session.workout_note?.trim();
+  const manual = session.source === "manual";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{session.workout_name ?? "Strength session"}</CardTitle>
-        <CardDescription>Recorded by your watch, started {time(session.started_at)}.</CardDescription>
+        <CardTitle className="flex items-center justify-between gap-3">
+          <span>{session.workout_name ?? "Strength session"}</span>
+          {manual && <Badge variant="secondary">Added by you</Badge>}
+        </CardTitle>
+        <CardDescription>{manual ? "Typed in by you." : `Recorded by your watch, started ${time(session.started_at)}.`}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         {facts.length > 0 && (
@@ -51,7 +57,7 @@ export function StrengthSessionCard({ session }: { session: StrengthSession }) {
               {groups.map((g, i) => (
                 <li key={`${g.exercise}-${i}`} className="space-y-2 py-3">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="font-medium">{g.exercise}</span>
+                    <span className="font-medium">{g.exercise}{g.manual && !manual && <Badge variant="secondary" className="ml-2">Added by you</Badge>}</span>
                     <span className="text-muted-foreground text-xs tabular-nums">
                       {g.sets.length} {g.sets.length === 1 ? "set" : "sets"}{g.volumeKg > 0 ? ` · ${g.volumeKg.toLocaleString("en-GB")} kg lifted` : ""}
                     </span>
@@ -61,6 +67,7 @@ export function StrengthSessionCard({ session }: { session: StrengthSession }) {
                       <li key={n} aria-label={set.long} className="bg-muted rounded-md px-2.5 py-1 text-sm tabular-nums">{set.short}</li>
                     ))}
                   </ul>
+                  {g.manual && <RemoveExerciseButton sessionId={session.id} positions={g.positions} />}
                 </li>
               ))}
             </ul>
@@ -68,6 +75,8 @@ export function StrengthSessionCard({ session }: { session: StrengthSession }) {
         ) : (
           <p className="text-muted-foreground">No exercise detail was recorded for this session.</p>
         )}
+        <AddExerciseForm sessionId={session.id} />
+        {manual && <RemoveWorkoutButton sessionId={session.id} />}
       </CardContent>
     </Card>
   );

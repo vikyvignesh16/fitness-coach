@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { AddWorkoutForm } from "@/components/strength-entry";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { loadFirstStrengthDay, loadStrength } from "@/lib/data";
@@ -42,6 +43,8 @@ export default async function GymPage(props: PageProps<"/gym">) {
         ) : <span className="size-11" />}
       </div>
 
+      <AddWorkoutForm today={today} />
+
       {rows.length === 0 ? (
         <p className="text-muted-foreground text-sm">Your watch recorded no strength sessions this week.</p>
       ) : (
@@ -65,7 +68,7 @@ export default async function GymPage(props: PageProps<"/gym">) {
                         </div>
                       ))}
                     </div>
-                    <Badge>{row.sessions.length > 1 ? `${row.sessions.length} sessions` : "Done"}</Badge>
+                    <Badge>{row.sessions.length > 1 ? `${row.sessions.length} sessions` : row.sessions[0].source === "manual" ? "Added" : "Done"}</Badge>
                     <ChevronRight aria-hidden className="text-muted-foreground size-5 shrink-0" />
                   </CardContent>
                 </Card>
