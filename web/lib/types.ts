@@ -147,3 +147,35 @@ export type RunExtra = {
   best_km_pace_s: number | null;
   detail_fetched_at: string | null;
 };
+
+/** A strength set as the COROS watch recorded it (migration 0013). weight_kg is null for body weight. */
+export type StrengthSet = {
+  position: number;
+  exercise: string;
+  reps: number | null;
+  weight_kg: number | null;
+  seconds: number | null;
+  avg_hr: number | null;
+  max_hr: number | null;
+};
+
+/** A strength session from COROS. Any number can be null: null means COROS had nothing, which is not zero. */
+export type StrengthSession = {
+  id: string;
+  coros_id: string;
+  started_at: string;
+  day: string; // yyyy-mm-dd, Paris date
+  workout_name: string | null;
+  duration_s: number | null;
+  total_time_s: number | null;
+  sets_count: number | null;
+  avg_hr: number | null;
+  calories: number | null;
+  training_load: number | null;
+  aerobic_te: number | null;
+  anaerobic_te: number | null;
+  training_focus: string | null;
+  perceived_effort: string | null;
+  workout_note: string | null;
+  sets: StrengthSet[];
+};

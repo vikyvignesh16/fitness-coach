@@ -15,6 +15,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
 from ingest import coros_auth as auth
+from ingest.coros_gym import update_gym_safely
 from ingest.coros_run_details import update_details_safely
 from ingest.import_plan import find_owner
 
@@ -133,6 +134,7 @@ def main() -> None:
     save_runs(sb, owner, runs)
     print(f"Saved {len(runs)} runs.")
     print(update_details_safely(sb, owner, token, mcp_url))  # run details are a bonus and never fail this job
+    print(update_gym_safely(sb, owner, token, mcp_url))  # so is the gym data
 
 
 if __name__ == "__main__":

@@ -2,12 +2,11 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { localDate } from "@/lib/runs";
 import { lockedWeeks } from "@/lib/gates";
-import { sessionProgress, type HistorySet, type LoggedSet, type PlannedExercise } from "@/lib/gym";
 import { isRestDay } from "@/lib/labels";
 import { runState, upcomingRuns, waitingCount, type ApprovalRow, type RunState, type UpcomingRun } from "@/lib/watch-approve";
-import { addDays, checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLocal } from "@/lib/weeks";
+import { addDays, checkinDue, gatePassed, mondayOf, todayLocal } from "@/lib/weeks";
 import { diffPlans, notesAdded, watchImpact, type DayChange, type DraftPlan } from "@/lib/proposal-diff";
-import type { HealthDay, RunExtra, PlanDay, PlanWeek, RecoverySnapshot, RunRow } from "@/lib/types";
+import type { HealthDay, RunExtra, StrengthSession, PlanDay, PlanWeek, RecoverySnapshot, RunRow } from "@/lib/types";
 import { BASELINE_DAYS } from "@/lib/insights-kpis";
 import type { InsightsRange } from "@/lib/insights-range";
 
@@ -110,126 +109,6 @@ export async function loadRunDetail(corosId: string): Promise<RunDetail | null> 
   };
 }
 
-// ---- Gym
-
-export type GymWeekData = {
-  weeks: PlanWeek[]; // every week that has gym sessions, for the arrows
-  week: PlanWeek;
-  locked: boolean;
-  sessions: { day: PlanDay; progress: { done: number; total: number }; started: boolean; finished: boolean }[];
-};
-
-type SetRowFromDb = {
-  exercise: string; set_no: number; reps: number | null; load_kg: number | null; seconds: number | null; done: boolean;
-};
-
-const GYM_SET_COLUMNS = "exercise, set_no, reps, load_kg, seconds, done";
-
-function addDaysTo(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-export async function loadGymWeek(requestedWeek: number | null): Promise<GymWeekData> {
-  const supabase = await createClient();
-  const { data: version, error: ve } = await supabase
-    .from("plan_versions").select("id").order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (ve || !version) throw new Error("Could not read the plan.");
-
-  const [weeksRes, gates] = await Promise.all([
-    supabase.from("plan_weeks").select("week, start_date, phase, total_km").eq("plan_version_id", version.id).order("week"),
-    supabase.from("approvals").select("passed, created_at").eq("kind", "gate").eq("gate_id", ANKLE_GATE_ID),
-  ]);
-  if (weeksRes.error) throw new Error("Could not read the weeks.");
-  if (gates.error) throw new Error("Could not read the ankle check.");
-
-  const weeks = (weeksRes.data as PlanWeek[]).filter((w) => w.phase !== "Actual");
-  const fallback = Math.max(currentWeekNumber(weeksRes.data as PlanWeek[], todayLocal()), weeks[0].week);
-  const week = weeks.find((w) => w.week === requestedWeek) ?? weeks.find((w) => w.week === fallback) ?? weeks[0];
-  const locked = lockedWeeks(gatePassed(gates.data ?? [])).includes(week.week);
-
-  const [daysRes, setsRes, sessionsRes] = await Promise.all([
-    supabase.from("plan_days").select("date, week, run, gym").eq("plan_version_id", version.id).eq("week", week.week).order("date"),
-    supabase
-      .from("gym_sets")
-      .select(`${GYM_SET_COLUMNS}, gym_sessions!inner(date)`)
-      .gte("gym_sessions.date", week.start_date)
-      .lte("gym_sessions.date", addDaysTo(week.start_date, 6)),
-    supabase
-      .from("gym_sessions")
-      .select("date, finished_at")
-      .gte("date", week.start_date)
-      .lte("date", addDaysTo(week.start_date, 6)),
-  ]);
-  if (daysRes.error || setsRes.error || sessionsRes.error) throw new Error("Could not read the gym log.");
-
-  const setsByDate = new Map<string, LoggedSet[]>();
-  for (const row of setsRes.data as unknown as (SetRowFromDb & { gym_sessions: { date: string } })[]) {
-    const list = setsByDate.get(row.gym_sessions.date) ?? [];
-    list.push(row);
-    setsByDate.set(row.gym_sessions.date, list);
-  }
-  const sessionRows = new Map((sessionsRes.data ?? []).map((s) => [s.date as string, s]));
-
-  const sessions = (daysRes.data as PlanDay[])
-    .filter((d) => d.gym && d.gym.key_exercises.length > 0)
-    .map((day) => {
-      const logged = setsByDate.get(day.date) ?? [];
-      return {
-        day,
-        progress: sessionProgress(day.gym!.key_exercises, logged),
-        started: logged.length > 0,
-        finished: Boolean(sessionRows.get(day.date)?.finished_at),
-      };
-    });
-  return { weeks, week, locked, sessions };
-}
-
-export type GymSessionData = {
-  day: PlanDay;
-  locked: boolean;
-  logged: LoggedSet[];
-  history: HistorySet[];
-  finished: boolean;
-};
-
-export async function loadGymSession(date: string): Promise<GymSessionData | null> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  const supabase = await createClient();
-  const { data: version } = await supabase
-    .from("plan_versions").select("id").order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (!version) return null;
-
-  const { data: day, error } = await supabase
-    .from("plan_days").select("date, week, run, gym").eq("plan_version_id", version.id).eq("date", date).maybeSingle();
-  if (error) throw new Error("Could not read the plan day.");
-  if (!day?.gym?.key_exercises?.length) return null;
-
-  const names = (day.gym.key_exercises as PlannedExercise[]).map((e) => e.name);
-  const [gates, setsRes, histRes, sessionRes] = await Promise.all([
-    supabase.from("approvals").select("passed, created_at").eq("kind", "gate").eq("gate_id", ANKLE_GATE_ID),
-    supabase.from("gym_sets").select(`${GYM_SET_COLUMNS}, gym_sessions!inner(date)`).eq("gym_sessions.date", date),
-    supabase
-      .from("gym_sets")
-      .select("exercise, load_kg, reps, done, gym_sessions!inner(date)")
-      .in("exercise", names)
-      .lt("gym_sessions.date", date),
-    supabase.from("gym_sessions").select("finished_at").eq("date", date).maybeSingle(),
-  ]);
-  if (gates.error || setsRes.error || histRes.error || sessionRes.error) throw new Error("Could not read the gym log.");
-
-  return {
-    day: day as PlanDay,
-    locked: lockedWeeks(gatePassed(gates.data ?? [])).includes(day.week),
-    logged: setsRes.data as unknown as LoggedSet[],
-    history: (histRes.data as unknown as (Omit<HistorySet, "date"> & { gym_sessions: { date: string } })[]).map((h) => ({
-      date: h.gym_sessions.date, exercise: h.exercise, load_kg: h.load_kg, reps: h.reps, done: h.done,
-    })),
-    finished: Boolean(sessionRes.data?.finished_at),
-  };
-}
-
 // ---- Calendar link
 
 /** The date the current calendar link was made (yyyy-mm-dd), or null if there is none. The link itself is never stored. */
@@ -290,7 +169,7 @@ export async function loadApprovePage(horizonDays = 14): Promise<ApprovePageData
 
   const [days, approvals, gates] = await Promise.all([
     supabase.from("plan_days").select("date, week, run, gym").eq("plan_version_id", version.id)
-      .gte("date", today).lte("date", addDaysTo(today, horizonDays - 1)).order("date"),
+      .gte("date", today).lte("date", addDays(today, horizonDays - 1)).order("date"),
     supabase.from("approvals").select("subject_date, sent_at, send_error").eq("kind", "watch_workout").gte("subject_date", today),
     supabase.from("approvals").select("passed, created_at").eq("kind", "gate").eq("gate_id", ANKLE_GATE_ID),
   ]);
@@ -528,4 +407,48 @@ export async function loadRunExtra(corosId: string): Promise<RunExtra | null> {
   } catch {
     return null;
   }
+}
+
+
+const STRENGTH_COLUMNS = "id, coros_id, started_at, day, workout_name, duration_s, total_time_s, sets_count, avg_hr, calories, training_load, aerobic_te, anaerobic_te, training_focus, perceived_effort, workout_note, strength_sets(position, exercise, reps, weight_kg, seconds, avg_hr, max_hr)";
+
+/**
+ * Strength sessions from the watch between two Paris dates, with their sets. Never throws: if the tables are not
+ * there yet or the read fails, the Gym pages still open and show no watch sessions.
+ */
+export async function loadStrength(from: string, to: string): Promise<StrengthSession[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("strength_sessions")
+      .select(STRENGTH_COLUMNS)
+      .gte("day", from)
+      .lte("day", to)
+      .order("started_at");
+    if (error || !data) return [];
+    return (data as unknown as (Omit<StrengthSession, "sets"> & { strength_sets: StrengthSession["sets"] })[]).map(({ strength_sets, ...s }) => ({
+      ...s,
+      sets: [...strength_sets].sort((a, b) => a.position - b.position),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** The earliest day the watch recorded a strength session, or null if there is none. Never throws. */
+export async function loadFirstStrengthDay(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from("strength_sessions").select("day").order("day").limit(1).maybeSingle();
+    return (data?.day as string | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** The strength sessions the watch recorded on one date. Null if there are none. */
+export async function loadGymDay(date: string): Promise<StrengthSession[] | null> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const sessions = await loadStrength(date, date);
+  return sessions.length ? sessions : null;
 }

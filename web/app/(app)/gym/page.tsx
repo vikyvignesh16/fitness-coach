@@ -1,73 +1,79 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { StatusBanner } from "@/components/status-banner";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { loadGymWeek } from "@/lib/data";
-import { dayMonth, weekdayShort } from "@/lib/weeks";
+import { loadFirstStrengthDay, loadStrength } from "@/lib/data";
+import { formatSessionTime, sessionsByDay, sessionTotals } from "@/lib/strength";
+import { addDays, dayMonth, mondayOf, todayLocal, weekdayShort } from "@/lib/weeks";
 
-function weekNumber(value: string | string[] | undefined): number | null {
-  const n = Number(Array.isArray(value) ? value[0] : value);
-  return Number.isInteger(n) ? n : null;
+/** Reads ?week=yyyy-mm-dd (any day of the week) and gives that week's Monday. Anything else means this week. */
+function weekStart(value: string | string[] | undefined, today: string): string {
+  const v = Array.isArray(value) ? value[0] : value;
+  if (v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`))) return mondayOf(v > today ? today : v);
+  return mondayOf(today);
 }
 
+/** The Gym tab: the strength sessions your watch recorded, a week at a time. */
 export default async function GymPage(props: PageProps<"/gym">) {
-  const requested = weekNumber((await props.searchParams).week);
-  const { weeks, week, locked, sessions } = await loadGymWeek(requested);
-  const index = weeks.findIndex((w) => w.week === week.week);
-  const prev = weeks[index - 1];
-  const next = weeks[index + 1];
+  const today = todayLocal();
+  const start = weekStart((await props.searchParams).week, today);
+  const end = addDays(start, 6);
+  const [sessions, first] = await Promise.all([loadStrength(start, end), loadFirstStrengthDay()]);
+  const rows = sessionsByDay(sessions);
+  const prev = first && start > mondayOf(first) ? addDays(start, -7) : null;
+  const next = start < mondayOf(today) ? addDays(start, 7) : null;
 
   return (
     <>
       <div className="flex items-center justify-between">
         {prev ? (
-          <Link href={`/gym?week=${prev.week}`} aria-label={`Week ${prev.week}`} className="flex size-11 items-center justify-center rounded-lg">
+          <Link href={`/gym?week=${prev}`} aria-label="Previous week" className="flex size-11 items-center justify-center rounded-lg">
             <ChevronLeft aria-hidden className="size-6" />
           </Link>
         ) : <span className="size-11" />}
         <div className="text-center">
-          <h1 className="text-xl font-semibold">Week {week.week}</h1>
-          <p className="text-muted-foreground text-sm">{week.phase} · from {dayMonth(week.start_date)}</p>
+          <h1 className="text-xl font-semibold">Gym</h1>
+          <p className="text-muted-foreground text-sm">{dayMonth(start)} to {dayMonth(end)}</p>
         </div>
         {next ? (
-          <Link href={`/gym?week=${next.week}`} aria-label={`Week ${next.week}`} className="flex size-11 items-center justify-center rounded-lg">
+          <Link href={`/gym?week=${next}`} aria-label="Next week" className="flex size-11 items-center justify-center rounded-lg">
             <ChevronRight aria-hidden className="size-6" />
           </Link>
         ) : <span className="size-11" />}
       </div>
 
-      {locked && (
-        <StatusBanner level="careful" title="This week is locked">
-          Do the four ankle checks first. <Link href="/gates/ankle" className="text-foreground underline">Open the ankle check</Link>
-        </StatusBanner>
+      {rows.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Your watch recorded no strength sessions this week.</p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((row) => (
+            <li key={row.date}>
+              <Link href={`/gym/${row.date}`} className="block">
+                <Card className="hover:bg-muted/40">
+                  <CardContent className="flex items-center gap-3">
+                    <div className="w-14 shrink-0">
+                      <p className="font-medium">{weekdayShort(row.date)}</p>
+                      <p className="text-muted-foreground text-xs">{dayMonth(row.date)}</p>
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {row.sessions.map((s) => (
+                        <div key={s.id}>
+                          <p className="font-medium">{s.workout_name ?? "Strength session"}</p>
+                          <p className="text-muted-foreground text-xs tabular-nums">
+                            {[s.duration_s === null ? null : formatSessionTime(s.duration_s), s.sets.length ? `${sessionTotals(s.sets).sets} sets` : null].filter(Boolean).join(" · ") || "No details"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <Badge>{row.sessions.length > 1 ? `${row.sessions.length} sessions` : "Done"}</Badge>
+                    <ChevronRight aria-hidden className="text-muted-foreground size-5 shrink-0" />
+                  </CardContent>
+                </Card>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
-
-      <ul className="space-y-2">
-        {sessions.map(({ day, progress, started, finished }) => (
-          <li key={day.date}>
-            <Link href={`/gym/${day.date}`} className="block">
-              <Card className="hover:bg-muted/40">
-                <CardContent className="flex items-center gap-3">
-                  <div className="w-14 shrink-0">
-                    <p className="font-medium">{weekdayShort(day.date)}</p>
-                    <p className="text-muted-foreground text-xs">{dayMonth(day.date)}</p>
-                  </div>
-                  <p className="min-w-0 flex-1 font-medium">{day.gym!.session}</p>
-                  {finished ? (
-                    <Badge>Finished</Badge>
-                  ) : started ? (
-                    <span className="text-muted-foreground text-sm tabular-nums">{progress.done} of {progress.total} done</span>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">{locked ? "Locked" : "Not started"}</span>
-                  )}
-                  <ChevronRight aria-hidden className="text-muted-foreground size-5 shrink-0" />
-                </CardContent>
-              </Card>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </>
   );
 }
