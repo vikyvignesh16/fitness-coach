@@ -1,5 +1,4 @@
-import type { PlanDay, StrengthSession, StrengthSet } from "./types";
-import { addDays } from "./weeks";
+import type { StrengthSession, StrengthSet } from "./types";
 
 export type ExerciseSummary = {
   exercise: string;
@@ -56,21 +55,13 @@ export function formatSessionTime(seconds: number): string {
   return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${m}m`;
 }
 
-export type GymWeekRow = {
-  date: string;
-  planned: string | null; // the plan's session name, if the plan had one that day
-  sessions: StrengthSession[]; // what the watch recorded that day
-};
+export type GymDayRow = { date: string; sessions: StrengthSession[] };
 
-/** One row for each day of the week that has a planned session or a recorded one, in date order. */
-export function gymWeekRows(weekStart: string, planDays: Pick<PlanDay, "date" | "gym">[], sessions: StrengthSession[]): GymWeekRow[] {
-  const rows: GymWeekRow[] = [];
-  for (let i = 0; i < 7; i++) {
-    const date = addDays(weekStart, i);
-    const plan = planDays.find((d) => d.date === date);
-    const planned = plan?.gym?.session && plan.gym.session !== "unverified" && plan.gym.key_exercises?.length ? plan.gym.session : null;
-    const done = sessions.filter((s) => s.day === date).sort((a, b) => a.started_at.localeCompare(b.started_at));
-    if (planned || done.length) rows.push({ date, planned, sessions: done });
-  }
-  return rows;
+/** One row for each day that has a recorded session, in date order, earliest session first within a day. */
+export function sessionsByDay(sessions: StrengthSession[]): GymDayRow[] {
+  const days = new Map<string, StrengthSession[]>();
+  for (const s of sessions) days.set(s.day, [...(days.get(s.day) ?? []), s]);
+  return [...days]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, list]) => ({ date, sessions: list.sort((a, b) => a.started_at.localeCompare(b.started_at)) }));
 }

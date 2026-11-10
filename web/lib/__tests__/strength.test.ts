@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSessionTime, gymWeekRows, sessionTotals, summariseSets } from "../strength";
+import { formatSessionTime, sessionsByDay, sessionTotals, summariseSets } from "../strength";
 import type { StrengthSession, StrengthSet } from "../types";
 
 const set = (position: number, exercise: string, reps: number | null, weight_kg: number | null): StrengthSet =>
@@ -50,37 +50,24 @@ describe("sessionTotals and time", () => {
   });
 });
 
-describe("gymWeekRows", () => {
+describe("sessionsByDay", () => {
   const session = (day: string, started: string): StrengthSession => ({
     id: day + started, coros_id: day + started, started_at: started, day, workout_name: null, duration_s: 100, total_time_s: null, sets_count: null, avg_hr: null,
     calories: null, training_load: null, aerobic_te: null, anaerobic_te: null, training_focus: null, perceived_effort: null, workout_note: null, sets: [],
   });
-  const plan = [
-    { date: "2026-11-02", gym: { session: "Legs + ankle/calf", key_exercises: [{ name: "x", sets: 3, reps: "10", rir: null }] } },
-    { date: "2026-11-03", gym: { session: "unverified", key_exercises: [] } },
-    { date: "2026-11-04", gym: { session: "Mobility", key_exercises: [] } },
-  ] as never;
 
-  it("shows planned days, days with a recorded session, and days with both, in date order", () => {
-    const rows = gymWeekRows("2026-11-02", plan, [session("2026-11-02", "a"), session("2026-11-05", "b")]);
-    expect(rows.map((r) => [r.date, r.planned, r.sessions.length])).toEqual([["2026-11-02", "Legs + ankle/calf", 1], ["2026-11-05", null, 1]]);
+  it("makes one row per day with a session, in date order", () => {
+    const rows = sessionsByDay([session("2026-11-05", "b"), session("2026-11-02", "a")]);
+    expect(rows.map((r) => r.date)).toEqual(["2026-11-02", "2026-11-05"]);
   });
 
-  it("a planned day nobody did still shows, as planned with no sessions", () => {
-    expect(gymWeekRows("2026-11-02", plan, [])).toEqual([{ date: "2026-11-02", planned: "Legs + ankle/calf", sessions: [] }]);
-  });
-
-  it("a day the plan marks unverified is not a planned session, even if it lists exercises", () => {
-    const odd = [{ date: "2026-11-02", gym: { session: "unverified", key_exercises: [{ name: "x", sets: 1, reps: "5", rir: null }] } }] as never;
-    expect(gymWeekRows("2026-11-02", odd, [])).toEqual([]);
-  });
-
-  it("two sessions on one day both show, earliest first", () => {
-    const rows = gymWeekRows("2026-11-02", [] as never, [session("2026-11-04", "2026-11-04T18:00"), session("2026-11-04", "2026-11-04T09:00")]);
+  it("two sessions on one day share a row, earliest first", () => {
+    const rows = sessionsByDay([session("2026-11-04", "2026-11-04T18:00"), session("2026-11-04", "2026-11-04T09:00")]);
+    expect(rows).toHaveLength(1);
     expect(rows[0].sessions.map((s) => s.started_at)).toEqual(["2026-11-04T09:00", "2026-11-04T18:00"]);
   });
 
-  it("ignores sessions outside the week", () => {
-    expect(gymWeekRows("2026-11-02", [] as never, [session("2026-11-09", "a")])).toEqual([]);
+  it("no sessions means no rows", () => {
+    expect(sessionsByDay([])).toEqual([]);
   });
 });
