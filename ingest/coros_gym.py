@@ -95,6 +95,7 @@ def save_one(sb, owner: str, coros_id: str, detail: dict, sets: list[dict], now:
 def run_job(sb, owner: str, fetched: dict, now: datetime, apply: bool) -> dict:
     """Parse what was fetched and (with apply) save it. Never returns any note text."""
     done = failed = n_sets = notes = 0
+    errors: set[str] = set()
     words: dict[str, set] = {"perceived_effort": set(), "training_focus": set()}
     for coros_id, texts in fetched.items():
         try:
@@ -110,10 +111,16 @@ def run_job(sb, owner: str, fetched: dict, now: datetime, apply: bool) -> dict:
                 words[key].add(detail[key])
         notes += 1 if detail.get("workout_note") else 0
         if apply:
-            save_one(sb, owner, coros_id, detail, sets, now.isoformat())
+            try:
+                save_one(sb, owner, coros_id, detail, sets, now.isoformat())
+            except Exception as e:  # noqa: BLE001 - one session the database rejects must not stop the others
+                failed += 1
+                errors.add(type(e).__name__)  # the type only: the details could hold your note or numbers
+                continue
         done += 1
         n_sets += len(sets)
-    return {"read": done, "failed": failed, "sets": n_sets, "with_note": notes, "words": {k: sorted(v) for k, v in words.items()}}
+    return {"read": done, "failed": failed, "sets": n_sets, "with_note": notes, "errors": sorted(errors),
+            "words": {k: sorted(v) for k, v in words.items()}}
 
 
 def load_sessions(sb) -> list[dict]:
@@ -161,6 +168,8 @@ def main() -> None:
         token = auth.get_access_token(sb, http)
     r = update_gym(sb, find_owner(sb), token, mcp_url, BACKFILL_DAYS if args.backfill else args.days, args.limit, args.apply)
     print(f"Listed {r['listed']} strength sessions. Read {r['read']} of them ({r['sets']} sets, {r['failed']} failed, {r['with_note']} with a note).")
+    if r["errors"]:
+        print(f"  could not save: {', '.join(r['errors'])}")
     for key, seen in r["words"].items():
         print(f"  {key}: {', '.join(seen) or 'none'}")
     print("Saved." if args.apply else "Dry run: nothing saved. Pass --apply to save.")

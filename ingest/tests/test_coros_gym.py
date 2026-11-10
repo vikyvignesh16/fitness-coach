@@ -138,3 +138,30 @@ def test_the_runs_job_hook_never_raises(monkeypatch):
     assert message == "Gym skipped (RuntimeError)." and "COROS is down" not in message
     monkeypatch.setattr(mod, "update_gym", lambda *a, **k: {"listed": 3, "read": 2, "sets": 40, "failed": 1})
     assert mod.update_gym_safely(None, "me", "t", "u") == "Gym: listed 3, read 2 (40 sets), 1 failed."
+
+
+def test_a_session_the_database_rejects_does_not_stop_the_others_and_only_the_error_type_is_reported():
+    class Rejecting(FakeSb):
+        def table(self, name):
+            t = super().table(name)
+            if name == "strength_sets" and not getattr(self, "_armed", False):
+                orig = t.upsert
+
+                def upsert(row, on_conflict, default_to_null=True):
+                    if row["session_id"] == "sid-bad":
+                        raise RuntimeError("violates check constraint, reps 1177, my private note")
+                    return orig(row, on_conflict, default_to_null)
+
+                t.upsert = upsert
+                self._armed = True
+            return t
+
+    sb = Rejecting()
+    for cid in ("c1", "bad", "c3"):
+        with_session(sb, cid)
+    good = (DETAIL, sets_json(LAPS))
+    report = run_job(sb, "me", {"c1": good, "bad": good, "c3": good}, NOW, apply=True)
+    assert (report["read"], report["failed"]) == (2, 1)
+    assert report["errors"] == ["RuntimeError"]
+    assert "private note" not in str(report) and "1177" not in str(report)
+    assert {k[0] for k in sb.t["strength_sets"].rows} == {"sid-c1", "sid-c3"}
