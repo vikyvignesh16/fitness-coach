@@ -60,4 +60,19 @@ export const HOW_TO = {
     picture: "It is the same amount of fuel taking you further. If newer dots sit higher or further left than older ones, you are going faster for the same effort, or the same speed with a calmer heart.",
     example: "Sam's September runs sit at about 155 beats and 6:10 a kilometre. October's sit at about 150 beats and 6:00. That is faster at a lower heart rate, which is what a more efficient engine looks like. Hills, heat, tiredness and a bad night all push a dot around, so only compare similar runs. Wrist heart rate can be off, and the chest strap will make this clearer.",
   },
+  stress: {
+    look: "The yellow line is your average stress each day, as COROS scores it. The dashed grey line is your own usual over the last 28 days.",
+    picture: "It is the engine's temperature gauge. A reading a little above your usual after a hard week is normal. A gauge that stays high while your sleep and recovery slip is the pattern to notice.",
+    example: "Sam's gauge sits around 34. After a trip and two short nights it reads 56 for three days, well above the dashed line. One day is a bump. Three days together, with poor sleep, is worth noticing.",
+  },
+  recovery: {
+    look: "The blue line is the last recovery reading of each day. The shaded band shows that day's lowest and highest readings. Below it, a small chart shows today's readings so far.",
+    picture: "It is the fuel gauge, read every three hours. After a hard session the needle drops, and it climbs back as you rest.",
+    example: "Sam finishes a long run and the gauge falls to 45% by the evening. The next morning it reads 85%. If it is still low two mornings later, Sam has not finished refuelling. COROS only tells us the current reading, so this chart began on 9 Nov and fills in as the days pass.",
+  },
+  loadday: {
+    look: "Each column is one day, or one week, of training load. Aqua is running and violet is gym. The numbers are COROS's own training load for each workout, added up. A day with no workout has no column.",
+    picture: "It is how hard each day of the road trip was. A tall column is a steep hill, and several tall columns in a row is a mountain pass.",
+    example: "Sam's runs score about 60 to 90 and a gym day about 30. The long run of 240 stands tall. The easy week after it shows small columns. Runs from before September may have no load figure, so those days are left empty and not counted as zero.",
+  },
 } satisfies Record<string, HowTo>;

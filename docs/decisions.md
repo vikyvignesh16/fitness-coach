@@ -331,3 +331,12 @@ Alternatives: a set by set grid (rejected for now: slow on a phone; the one line
 Cost: no editing yet. A watch session can show your exercises after the watch's ones, which is what you asked for.
 Revisit when: you want to edit an entry instead of removing and adding it again.
 Status: open
+
+## 2026-11-10 Insights step A: stress, recovery history and training load per day
+Chose: three more charts. Stress is a line of the daily average against your own 28 day average, like resting heart rate. Recovery shows the last reading of each day with the day's lowest to highest as a band, and below it a small "today so far" line from the 3 hourly snapshots. With fewer than two readings today it says so in words, because one reading draws no line. Its history began on 9 Nov, because COROS only gives the current value, and nothing is back filled. Training load per day adds up the COROS load of every run and gym session (the numbers saved from the run and session details), as columns per day or week, with a filter for All, Running or Strength kept in the address (?load=). Cycling is not in our data, so it is not offered.
+Missing against zero: a day with no workout is a real zero ("No workout recorded"). Workouts that COROS gave no load for are never counted as zero: a day where none of them has a figure shows no data, and a day where only some do adds up the scored ones and says how many are not counted. Runs from before September mostly have no load figure, so those days are empty.
+Fixed on the way: the 2px gap I draw between touching columns eats a column whole when there are many on a narrow screen, so 90 daily columns on a phone nearly vanished. With more than 31 columns there is now no gap (gapFor in chart-parts.tsx). This also applies to the sleep stage chart. It was one cause of columns looking black or missing. The other, earlier, was stale styles from running a production build next to the dev server.
+Colours: stress yellow, recovery blue, running aqua and strength violet, all checked with the palette checker (the aqua and violet pair passes the all pairs test).
+Alternatives: a gauge for recovery (rejected in the spec); counting an unscored workout as zero load (rejected: it would make a hard week look easy).
+Revisit when: recovery has a few weeks of history, or cycling is added to the data.
+Status: open

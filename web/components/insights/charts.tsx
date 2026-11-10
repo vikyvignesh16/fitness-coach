@@ -3,7 +3,7 @@
 import {
   Area, Bar, CartesianGrid, Cell, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { AXIS_LINE, AXIS_TICK, GRID, Legend, TipBox } from "@/components/insights/chart-parts";
+import { AXIS_LINE, AXIS_TICK, GRID, gapFor, Legend, TipBox } from "@/components/insights/chart-parts";
 import { compareToBaseline, formatMinutes } from "@/lib/insights-kpis";
 import type { HrvPoint, LoadPoint, RhrPoint, ScorePoint, SleepPoint, VolumePoint } from "@/lib/insights-series";
 
@@ -80,7 +80,7 @@ export function SleepCompositionChart({ data }: { data: SleepPoint[] }) {
         {yAxis([0, "auto"], "h")}
         <Tooltip content={<SleepTip />} cursor={{ fill: "var(--muted)", opacity: 0.5 }} />
         {STAGES.map((s, i) => (
-          <Bar key={s.key} dataKey={s.key} name={s.name} stackId="sleep" fill={s.color} stroke={SURFACE} strokeWidth={2}
+          <Bar key={s.key} dataKey={s.key} name={s.name} stackId="sleep" fill={s.color} stroke={SURFACE} strokeWidth={gapFor(data.length)}
             maxBarSize={24} radius={i === STAGES.length - 1 ? [4, 4, 0, 0] : 0} isAnimationActive={false} />
         ))}
       </ComposedChart>
