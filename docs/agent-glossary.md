@@ -20,3 +20,8 @@ Words from the agent lessons, in plain language. It grows with each lesson.
 * **Validation**: checking that a reply fits the form. It checks the shape, not whether the content is true.
 * **Silent failure**: the program runs and the answer looks fine but is wrong, such as lost history or a confident wrong claim. Worse than a loud crash, because nobody notices.
 * **Coroutine**: what an async function gives back when you call it without await. A recipe card that nobody cooked.
+* **Tool**: a plain function the model may ask for. The model never runs it. Our code does, so our code decides what is allowed. ADK shows the model the function's name, docstring and type hints, so a clear docstring is part of the tool.
+* **Event**: one recorded step of the loop: the model asks for a tool, our code runs it, the model answers. Printing events is how you debug an agent.
+* **Round**: one trip through the loop (model, then maybe tool). We cap the rounds, because a loop with no limit can run up a bill.
+* **Grounding**: giving the model real data through a tool, so it reads numbers instead of guessing them. It lowers hallucination but does not remove it.
+* **Dependency injection**: passing a part in from outside (here, the function that reads data) so tests and demos can swap in a fake.

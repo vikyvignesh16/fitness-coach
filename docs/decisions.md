@@ -380,3 +380,11 @@ Known ADK limit, to design around: setting output_schema stops an agent from usi
 Alternatives: asking for JSON in the prompt only (rejected: no guarantee, more broken replies); parsing free text with rules (rejected: breaks as soon as the wording changes).
 Revisit when: the daily review form is designed in lesson 10.
 Status: open
+
+## 2026-11-10 Agent lesson 3: the first tool, get_recent_health
+Chose: a read only tool (coach/tools.py) that returns up to 14 days of sleep, HRV, resting heart rate, stress, load ratio and recovery from health_daily. It checks its own input (a whole number, 1 to 14; text, decimals, booleans and out of range are refused with a message and never reach the database). A missing value is null. It reports how many days had no data at all. The tool is built with the data reader passed in, so tests and demos use invented rows.
+The loop was also written by hand (coach/loop_by_hand.py, with a round limit of 5), to show what ADK does for us. It refuses an unknown tool name and survives wrong inputs. Tests use a scripted fake model, so they cost nothing.
+Real run on invented rows: 3 steps (the model asked for the tool with days=7, our code ran it, the model answered), 2 model calls, 2 receipts. The second call's input was 923 tokens against 263 for the first, because the tool result goes back into the conversation. Cost about $0.0002 in all. The answer matched the numbers and said one day had no data. ADK shows each step as an event, which the script prints.
+Known limits: the tool is read only, and tools run with the service role key in this practice script. In the service (lesson 9) they must run as the signed in user, so Row Level Security protects the data. A bigger tool result means more input tokens, so keep results small.
+Alternatives: letting the model write SQL (rejected: far too much power, and a mistake could read or change anything); one big tool returning everything (rejected: slow, expensive and unfocused).
+Status: open
