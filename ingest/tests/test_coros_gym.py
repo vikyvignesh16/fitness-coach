@@ -165,3 +165,23 @@ def test_a_session_the_database_rejects_does_not_stop_the_others_and_only_the_er
     assert report["errors"] == ["RuntimeError"]
     assert "private note" not in str(report) and "1177" not in str(report)
     assert {k[0] for k in sb.t["strength_sets"].rows} == {"sid-c1", "sid-c3"}
+
+
+def test_a_session_whose_sets_could_not_be_saved_is_not_marked_as_read_so_it_is_tried_again():
+    import pytest
+
+    class FailingSets(FakeSb):
+        def table(self, name):
+            t = super().table(name)
+            if name == "strength_sets":
+                def boom(*a, **k):
+                    raise RuntimeError("check constraint")
+                t.upsert = boom
+            return t
+
+    sb = FailingSets()
+    with_session(sb, "c1")
+    with pytest.raises(RuntimeError):
+        save_one(sb, "me", "c1", {"training_load": 30}, [{"position": 1, "exercise": "Press", "reps": 12}], "t")
+    assert "detail_fetched_at" not in sb.t["strength_sessions"].rows[("me", "c1")]
+    assert "training_load" not in sb.t["strength_sessions"].rows[("me", "c1")]

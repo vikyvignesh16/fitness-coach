@@ -88,8 +88,10 @@ def save_one(sb, owner: str, coros_id: str, detail: dict, sets: list[dict], now:
     found = sb.table("strength_sessions").select("id").eq("user_id", owner).eq("coros_id", coros_id).execute().data
     if not found:
         raise ValueError("session not saved yet")
-    sb.table("strength_sessions").update(session_update(detail, now)).eq("id", found[0]["id"]).execute()
+    # The sets go first and the "details read" stamp goes last. If saving the sets fails, the session is not stamped,
+    # so the next run tries it again instead of treating a half saved session as finished.
     save_sets(sb, owner, found[0]["id"], sets)
+    sb.table("strength_sessions").update(session_update(detail, now)).eq("id", found[0]["id"]).execute()
 
 
 def run_job(sb, owner: str, fetched: dict, now: datetime, apply: bool) -> dict:
