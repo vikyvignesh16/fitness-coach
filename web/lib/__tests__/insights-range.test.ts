@@ -6,7 +6,7 @@ const today = "2026-11-09";
 describe("parseInsightsRange", () => {
   it("defaults to the last 7 days, today included", () => {
     expect(parseInsightsRange({}, today)).toEqual({
-      preset: "7", from: "2026-11-03", to: today, days: 7, view: "daily", dist: "all", loadKind: "all", notice: null,
+      preset: "7", from: "2026-11-03", to: today, days: 7, view: "daily", dist: "all", loadKind: "all", workouts: "all", sort: "date", allRows: false, notice: null,
     });
   });
 
@@ -21,7 +21,7 @@ describe("parseInsightsRange", () => {
 
   it("reads a custom range and counts both end days", () => {
     expect(parseInsightsRange({ range: "custom", from: "2026-10-01", to: "2026-10-31" }, today)).toEqual({
-      preset: "custom", from: "2026-10-01", to: "2026-10-31", days: 31, view: "daily", dist: "all", loadKind: "all", notice: null,
+      preset: "custom", from: "2026-10-01", to: "2026-10-31", days: 31, view: "daily", dist: "all", loadKind: "all", workouts: "all", sort: "date", allRows: false, notice: null,
     });
   });
 
@@ -95,6 +95,26 @@ describe("load filter", () => {
     expect(insightsHref(r, { preset: "90" })).toBe("/insights?range=90&view=daily&dist=5-10&load=run");
     expect(insightsHref(r, { loadKind: "all" })).toBe("/insights?range=30&view=daily&dist=5-10");
     expect(insightsHref(parseInsightsRange({ range: "30" }, today), { loadKind: "strength" })).toBe("/insights?range=30&view=daily&load=strength");
+  });
+});
+
+describe("workout table settings", () => {
+  it("reads show, sort and rows, and anything else gives the defaults", () => {
+    const r = parseInsightsRange({ show: "strength", sort: "load", rows: "all" }, today);
+    expect([r.workouts, r.sort, r.allRows]).toEqual(["strength", "load", true]);
+    const d = parseInsightsRange({ show: "cycling", sort: "pace", rows: "some" }, today);
+    expect([d.workouts, d.sort, d.allRows]).toEqual(["all", "date", false]);
+  });
+
+  it("keeps them in the links, and leaves out the defaults", () => {
+    const r = parseInsightsRange({ range: "30", show: "run", sort: "load", rows: "all" }, today);
+    expect(insightsHref(r, { preset: "90" })).toBe("/insights?range=90&view=daily&show=run&sort=load&rows=all");
+    expect(insightsHref(r, { workouts: "all", sort: "date", allRows: false })).toBe("/insights?range=30&view=daily");
+  });
+
+  it("does not mix up the table's workout filter with the load chart's", () => {
+    const r = parseInsightsRange({ load: "run", show: "strength" }, today);
+    expect([r.loadKind, r.workouts]).toEqual(["run", "strength"]);
   });
 });
 
