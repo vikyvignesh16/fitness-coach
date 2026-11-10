@@ -1,44 +1,35 @@
 import type { StrengthSession, StrengthSet } from "./types";
 
+export type SetLabel = { short: string; long: string }; // "12 × 22 kg" for the tag, "Set 1: 12 reps at 22 kg" for screen readers
+
 export type ExerciseSummary = {
   exercise: string;
-  sets: { reps: number | null; kg: number | null }[];
+  sets: SetLabel[]; // one for every set, in the order done
   volumeKg: number; // reps times weight, added up. Body weight sets add nothing.
-  lines: string[]; // "2 sets of 12 at 16 kg", repeated sets collapsed
 };
 
 const num = (n: number) => String(Math.round(n * 100) / 100);
 
-function lineFor(reps: number | null, kg: number | null, count: number): string {
-  const sets = `${count} ${count === 1 ? "set" : "sets"}`;
-  const of = reps === null ? "" : ` of ${reps}`;
-  return kg === null ? `${sets}${of}` : `${sets}${of} at ${num(kg)} kg`;
+/** "12 × 22 kg". Body weight is "15 reps". Nothing recorded for reps is just the weight. */
+export function setLabel(n: number, reps: number | null, kg: number | null): SetLabel {
+  const short = reps === null ? (kg === null ? "set" : `${num(kg)} kg`) : kg === null ? `${reps} reps` : `${reps} × ${num(kg)} kg`;
+  const long = reps === null ? (kg === null ? `Set ${n}` : `Set ${n}: ${num(kg)} kg`) : kg === null ? `Set ${n}: ${reps} reps` : `Set ${n}: ${reps} reps at ${num(kg)} kg`;
+  return { short, long };
 }
 
-/** Group the sets of a session by exercise, in the order done. Identical sets in a row become one line. */
+/** Group the sets of a session by exercise, in the order done. Every set stays its own entry. */
 export function summariseSets(sets: StrengthSet[]): ExerciseSummary[] {
   const out: ExerciseSummary[] = [];
   for (const s of [...sets].sort((a, b) => a.position - b.position)) {
     let block = out[out.length - 1];
     if (!block || block.exercise !== s.exercise) {
-      block = { exercise: s.exercise, sets: [], volumeKg: 0, lines: [] };
+      block = { exercise: s.exercise, sets: [], volumeKg: 0 };
       out.push(block);
     }
-    block.sets.push({ reps: s.reps, kg: s.weight_kg });
+    block.sets.push(setLabel(block.sets.length + 1, s.reps, s.weight_kg));
     block.volumeKg += (s.reps ?? 0) * (s.weight_kg ?? 0);
   }
-  for (const b of out) {
-    const lines: string[] = [];
-    let i = 0;
-    while (i < b.sets.length) {
-      let j = i;
-      while (j + 1 < b.sets.length && b.sets[j + 1].reps === b.sets[i].reps && b.sets[j + 1].kg === b.sets[i].kg) j++;
-      lines.push(lineFor(b.sets[i].reps, b.sets[i].kg, j - i + 1));
-      i = j + 1;
-    }
-    b.lines = lines;
-    b.volumeKg = Math.round(b.volumeKg * 10) / 10;
-  }
+  for (const b of out) b.volumeKg = Math.round(b.volumeKg * 10) / 10;
   return out;
 }
 

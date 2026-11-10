@@ -49,12 +49,18 @@ export function StrengthSessionCard({ session }: { session: StrengthSession }) {
             <p className="text-muted-foreground mb-1">Exercises</p>
             <ul className="divide-y">
               {groups.map((g, i) => (
-                <li key={`${g.exercise}-${i}`} className="py-2">
+                <li key={`${g.exercise}-${i}`} className="space-y-2 py-3">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="font-medium">{g.exercise}</span>
-                    {g.volumeKg > 0 && <span className="text-muted-foreground text-xs tabular-nums">{g.volumeKg.toLocaleString("en-GB")} kg total</span>}
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {g.sets.length} {g.sets.length === 1 ? "set" : "sets"}{g.volumeKg > 0 ? ` · ${g.volumeKg.toLocaleString("en-GB")} kg lifted` : ""}
+                    </span>
                   </div>
-                  <p className="text-muted-foreground">{g.lines.join(" · ")}</p>
+                  <ul className="flex flex-wrap gap-2">
+                    {g.sets.map((set, n) => (
+                      <li key={n} aria-label={set.long} className="bg-muted rounded-md px-2.5 py-1 text-sm tabular-nums">{set.short}</li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>

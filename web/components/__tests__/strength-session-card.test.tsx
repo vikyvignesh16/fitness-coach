@@ -19,12 +19,14 @@ describe("StrengthSessionCard", () => {
     render(<StrengthSessionCard session={base} />);
     expect(screen.getByText("Shoulders and Core Version 1")).toBeInTheDocument();
     expect(screen.getByText("1h 09m")).toBeInTheDocument();
-    expect(screen.getByText("384 kg")).toBeInTheDocument(); // 12 x 16 x 2
+    expect(screen.getByText("384 kg")).toBeInTheDocument(); // 12 x 16 x 2, in the numbers at the top
     expect(screen.getByText("Easy")).toBeInTheDocument();
     expect(screen.getByText(/Felt good\./).className).toMatch(/whitespace-pre-line/);
     expect(screen.getByText("Seated Dumbbell Press")).toBeInTheDocument();
-    expect(screen.getByText("2 sets of 12 at 16 kg")).toBeInTheDocument();
-    expect(screen.getByText("1 set of 15")).toBeInTheDocument();
+    expect(screen.getAllByText("12 × 16 kg")).toHaveLength(2); // each set is its own tag
+    expect(screen.getByText("15 reps")).toBeInTheDocument();
+    expect(screen.getByText("2 sets · 384 kg lifted")).toBeInTheDocument();
+    expect(screen.getByLabelText("Set 2: 12 reps at 16 kg")).toBeInTheDocument();
   });
 
   it("counts the sets it shows, not the larger number COROS counts for warm up and rests", () => {

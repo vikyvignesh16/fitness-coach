@@ -6,17 +6,26 @@ const set = (position: number, exercise: string, reps: number | null, weight_kg:
   ({ position, exercise, reps, weight_kg, seconds: null, avg_hr: null, max_hr: null });
 
 describe("summariseSets", () => {
-  const sets = [set(1, "Press", 12, 16), set(2, "Press", 12, 16), set(3, "Press", 12, 18), set(4, "Crunch", 15, null), set(5, "Crunch", 15, null)];
+  const sets = [set(1, "Press", 12, 22), set(2, "Press", 12, 24), set(3, "Press", 13, 24), set(4, "Press", 12, 26), set(5, "Crunch", 15, null), set(6, "Crunch", 15, null)];
   const groups = summariseSets(sets);
 
-  it("groups by exercise in the order done and collapses identical sets", () => {
+  it("keeps every set as its own entry, in the order done, so they are easy to read one by one", () => {
     expect(groups.map((g) => g.exercise)).toEqual(["Press", "Crunch"]);
-    expect(groups[0].lines).toEqual(["2 sets of 12 at 16 kg", "1 set of 12 at 18 kg"]);
-    expect(groups[1].lines).toEqual(["2 sets of 15"]);
+    expect(groups[0].sets.map((s) => s.short)).toEqual(["12 × 22 kg", "12 × 24 kg", "13 × 24 kg", "12 × 26 kg"]);
+    expect(groups[1].sets.map((s) => s.short)).toEqual(["15 reps", "15 reps"]);
+  });
+
+  it("does not merge identical sets, because each one is a set you did", () => {
+    expect(summariseSets([set(1, "A", 10, 10), set(2, "A", 10, 10)])[0].sets).toHaveLength(2);
+  });
+
+  it("gives screen readers the full words with the set number", () => {
+    expect(groups[0].sets[2].long).toBe("Set 3: 13 reps at 24 kg");
+    expect(groups[1].sets[0].long).toBe("Set 1: 15 reps");
   });
 
   it("adds up reps times weight, and body weight sets add nothing", () => {
-    expect(groups[0].volumeKg).toBe(12 * 16 * 2 + 12 * 18);
+    expect(groups[0].volumeKg).toBe(12 * 22 + 12 * 24 + 13 * 24 + 12 * 26);
     expect(groups[1].volumeKg).toBe(0);
   });
 
@@ -28,13 +37,14 @@ describe("summariseSets", () => {
     expect(summariseSets([set(1, "Curl", 10, 10), set(2, "Row", 10, 20), set(3, "Curl", 8, 12)]).map((g) => g.exercise)).toEqual(["Curl", "Row", "Curl"]);
   });
 
-  it("shows half kilos and leaves out the reps when COROS had none", () => {
-    expect(summariseSets([set(1, "Raise", 10, 4.5)])[0].lines).toEqual(["1 set of 10 at 4.5 kg"]);
-    expect(summariseSets([set(1, "Hold", null, null)])[0].lines).toEqual(["1 set"]);
+  it("shows half kilos, and handles a set with no reps or no weight", () => {
+    expect(summariseSets([set(1, "Raise", 10, 4.5)])[0].sets[0].short).toBe("10 × 4.5 kg");
+    expect(summariseSets([set(1, "Hold", null, 20)])[0].sets[0].short).toBe("20 kg");
+    expect(summariseSets([set(1, "Hold", null, null)])[0].sets[0].short).toBe("set");
   });
 
-  it("a different weight breaks a run of identical sets", () => {
-    expect(summariseSets([set(1, "A", 10, 10), set(2, "A", 10, 12), set(3, "A", 10, 10)])[0].lines).toHaveLength(3);
+  it("a set with zero reps is shown as zero, not hidden", () => {
+    expect(summariseSets([set(1, "A", 0, null)])[0].sets[0].short).toBe("0 reps");
   });
 });
 
