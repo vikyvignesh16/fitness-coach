@@ -35,3 +35,12 @@ reset role;
 select 'authenticated can write ' || t as problem
 from (values ('health_daily'), ('recovery_snapshots')) as x(t), unnest(array['insert', 'update', 'delete']) as p
 where has_table_privilege('authenticated', x.t, p);
+
+-- 6. Strength sessions from COROS (migration 0013). All of these must return zero rows.
+set local role anon;
+select 'strength_sessions' as t, count(*) from strength_sessions having count(*) > 0
+union all select 'strength_sets', count(*) from strength_sets having count(*) > 0;
+reset role;
+select 'authenticated can write ' || t as problem
+from (values ('strength_sessions'), ('strength_sets')) as x(t), unnest(array['insert', 'update', 'delete']) as p
+where has_table_privilege('authenticated', x.t, p);
