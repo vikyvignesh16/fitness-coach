@@ -75,4 +75,14 @@ export const HOW_TO = {
     picture: "It is how hard each day of the road trip was. A tall column is a steep hill, and several tall columns in a row is a mountain pass.",
     example: "Sam's runs score about 60 to 90 and a gym day about 30. The long run of 240 stands tall. The easy week after it shows small columns. Runs from before September may have no load figure, so those days are left empty and not counted as zero.",
   },
+  loadhrv: {
+    look: "Each dot is one day. Going across is that day's training load. Going up is how your HRV the next morning compared with COROS's baseline for that date. A dot above the dashed line means a better morning than usual, and below means a lower one. Rest days sit on the left edge.",
+    picture: "It is asking whether a bigger day on the road leaves the suspension stiffer the next morning. With only a handful of days, it is a hint and not an answer.",
+    example: "Sam's rest days land close to the dashed line. After a load of 240 the next morning sits 9 below it. One dot proves nothing, because sleep, stress and a glass of wine all move HRV too. If the big days keep landing low over many weeks, Sam has learned how much a hard day costs.",
+  },
+  effort: {
+    look: "Each dot is one workout. Going across is how it felt, from Very Easy to Very Hard, as you rated it on the watch. Going up is your HRV from the morning of that workout. Dots can sit on top of each other, and the tooltip names each one.",
+    picture: "It is asking whether the fuel stop before a trip tells you how the trip will feel. Maybe a smooth night means an easy drive, and maybe not.",
+    example: "Sam's three Hard runs came after nights of 48, 52 and 50. The Easy runs came after 60 and above. With so few dots that could be chance, so Sam keeps logging and looks again in a few weeks. Workouts with no rating, or a word outside the five, are left out and counted underneath.",
+  },
 } satisfies Record<string, HowTo>;

@@ -4,6 +4,7 @@ import { formatHms, formatPace, type EfficiencyPoint, type FitnessPoint, type Lo
 import type { LoadSlot, RecoveryPoint, StressPoint } from "./insights-series";
 import type { HrvPoint, LoadPoint, RhrPoint, ScorePoint, SleepPoint, VolumePoint } from "./insights-series";
 import type { View } from "./insights-range";
+import type { EffortHrvPoint, LoadHrvPoint } from "./insights-scatter";
 
 const first = (view: View) => (view === "daily" ? "Day" : "Week starting");
 const mins = (hours: number | null) => (hours === null ? null : formatMinutes(Math.round(hours * 60)));
@@ -67,4 +68,14 @@ export const recoveryTable = (p: RecoveryPoint[], view: View): DataTable => ({
 export const loadPerSlotTable = (p: LoadSlot[], view: View): DataTable => ({
   columns: [first(view), "Running", "Strength", "Total load", "Workouts with no load figure"],
   rows: p.map((x) => [x.label, x.total === null ? null : x.run, x.total === null ? null : x.strength, x.total, x.unscored]),
+});
+
+export const loadHrvTable = (p: LoadHrvPoint[]): DataTable => ({
+  columns: ["Day", "Training load", "Next morning HRV (ms)", "COROS baseline (ms)", "Difference (ms)"],
+  rows: p.map((x) => [x.label + (x.rest ? " (rest day)" : ""), x.load, x.hrv, x.baseline, x.deviation]),
+});
+
+export const effortHrvTable = (p: EffortHrvPoint[]): DataTable => ({
+  columns: ["Day", "Workout", "How it felt", "HRV that morning (ms)"],
+  rows: p.map((x) => [x.label, x.title, x.word, x.hrv]),
 });
