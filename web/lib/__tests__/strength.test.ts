@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { formatSessionTime, sessionsByDay, sessionTotals, summariseSets } from "../strength";
 import type { StrengthSession, StrengthSet } from "../types";
 
-const set = (position: number, exercise: string, reps: number | null, weight_kg: number | null): StrengthSet =>
-  ({ position, exercise, reps, weight_kg, seconds: null, avg_hr: null, max_hr: null });
+const set = (position: number, exercise: string, reps: number | null, weight_kg: number | null, source: "coros" | "manual" = "coros"): StrengthSet =>
+  ({ source, position, exercise, reps, weight_kg, seconds: null, avg_hr: null, max_hr: null });
 
 describe("summariseSets", () => {
   const sets = [set(1, "Press", 12, 22), set(2, "Press", 12, 24), set(3, "Press", 13, 24), set(4, "Press", 12, 26), set(5, "Crunch", 15, null), set(6, "Crunch", 15, null)];
@@ -43,6 +43,20 @@ describe("summariseSets", () => {
     expect(summariseSets([set(1, "Hold", null, null)])[0].sets[0].short).toBe("set");
   });
 
+  it("your own sets come after the watch's, even when they are numbered lower, and stay in their own blocks", () => {
+    const mixed = [set(1, "Curl", 10, 12, "manual"), set(2, "Press", 12, 20), set(1, "Press", 12, 20), set(2, "Curl", 10, 12, "manual")];
+    const g = summariseSets(mixed);
+    expect(g.map((x) => [x.exercise, x.manual])).toEqual([["Press", false], ["Curl", true]]);
+    expect(g[0].positions).toEqual([1, 2]);
+    expect(g[1].positions).toEqual([1, 2]);
+  });
+
+  it("the same exercise from the watch and by hand are two blocks, so only yours can be deleted", () => {
+    const g = summariseSets([set(1, "Press", 10, 20), set(1, "Press", 8, 22, "manual")]);
+    expect(g).toHaveLength(2);
+    expect(g.map((x) => x.manual)).toEqual([false, true]);
+  });
+
   it("a set with zero reps is shown as zero, not hidden", () => {
     expect(summariseSets([set(1, "A", 0, null)])[0].sets[0].short).toBe("0 reps");
   });
@@ -62,7 +76,7 @@ describe("sessionTotals and time", () => {
 
 describe("sessionsByDay", () => {
   const session = (day: string, started: string): StrengthSession => ({
-    id: day + started, coros_id: day + started, started_at: started, day, workout_name: null, duration_s: 100, total_time_s: null, sets_count: null, avg_hr: null,
+    id: day + started, source: "coros", coros_id: day + started, started_at: started, day, workout_name: null, duration_s: 100, total_time_s: null, sets_count: null, avg_hr: null,
     calories: null, training_load: null, aerobic_te: null, anaerobic_te: null, training_focus: null, perceived_effort: null, workout_note: null, sets: [],
   });
 

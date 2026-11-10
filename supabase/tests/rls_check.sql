@@ -44,3 +44,10 @@ reset role;
 select 'authenticated can write ' || t as problem
 from (values ('strength_sessions'), ('strength_sets')) as x(t), unnest(array['insert', 'update', 'delete']) as p
 where has_table_privilege('authenticated', x.t, p);
+
+-- 7. Manual strength rows (migration 0016). Must return zero rows.
+--    The anon role must not write either table. (What a signed in user may and may not change is tested by hand
+--    inside a transaction that is rolled back: only rows marked 'manual', only their own.)
+select 'anon can write ' || t as problem
+from (values ('strength_sessions'), ('strength_sets')) as x(t), unnest(array['insert', 'update', 'delete']) as p
+where has_table_privilege('anon', x.t, p);

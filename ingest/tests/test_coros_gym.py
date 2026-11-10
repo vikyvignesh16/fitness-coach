@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from ingest.coros_gym import run_job, save_one, save_sessions, save_sets, session_update
+from ingest.coros_gym import load_sessions, run_job, save_one, save_sessions, save_sets, session_update
 from ingest.tests.test_strength_parse import DETAIL, LAPS, sets_json
 
 NOW = datetime(2026, 11, 10, 12, 0, tzinfo=timezone.utc)
@@ -54,7 +54,7 @@ class FakeTable:
 
 class FakeSb:
     def __init__(self):
-        self.t = {"strength_sessions": FakeTable(("user_id", "coros_id")), "strength_sets": FakeTable(("session_id", "position"))}
+        self.t = {"strength_sessions": FakeTable(("user_id", "coros_id")), "strength_sets": FakeTable(("session_id", "source", "position"))}
 
     def table(self, name):
         return self.t[name]
@@ -85,14 +85,14 @@ def test_saving_a_session_writes_its_detail_and_its_sets():
     with_session(sb)
     save_one(sb, "me", "c1", {"training_load": 30, "workout_note": "hi"}, [{"position": 1, "exercise": "Press", "reps": 12}], "t")
     assert sb.t["strength_sessions"].rows[("me", "c1")]["training_load"] == 30
-    assert list(sb.t["strength_sets"].rows.values()) == [{"position": 1, "exercise": "Press", "reps": 12, "user_id": "me", "session_id": "sid-c1"}]
+    assert list(sb.t["strength_sets"].rows.values()) == [{"position": 1, "exercise": "Press", "reps": 12, "user_id": "me", "session_id": "sid-c1", "source": "coros"}]
 
 
 def test_a_shorter_session_leaves_no_old_sets_behind():
     sb = FakeSb()
     save_sets(sb, "me", "s1", [{"position": i, "exercise": "Press", "reps": 10} for i in (1, 2, 3, 4)])
     save_sets(sb, "me", "s1", [{"position": i, "exercise": "Press", "reps": 10} for i in (1, 2)])
-    assert sorted(k[1] for k in sb.t["strength_sets"].rows) == [1, 2]
+    assert sorted(k[2] for k in sb.t["strength_sets"].rows) == [1, 2]
 
 
 def test_saving_the_same_sets_twice_gives_the_same_rows():
@@ -185,3 +185,31 @@ def test_a_session_whose_sets_could_not_be_saved_is_not_marked_as_read_so_it_is_
         save_one(sb, "me", "c1", {"training_load": 30}, [{"position": 1, "exercise": "Press", "reps": 12}], "t")
     assert "detail_fetched_at" not in sb.t["strength_sessions"].rows[("me", "c1")]
     assert "training_load" not in sb.t["strength_sessions"].rows[("me", "c1")]
+
+
+def test_the_watch_job_never_touches_sets_you_added_by_hand():
+    sb = FakeSb()
+    # Two watch sets, and three you typed, one of them on the same position number as a watch set.
+    save_sets(sb, "me", "s1", [{"position": i, "exercise": "Press", "reps": 10} for i in (1, 2)])
+    for pos in (1, 2, 3):
+        sb.t["strength_sets"].rows[("s1", "manual", pos)] = {"session_id": "s1", "source": "manual", "position": pos, "exercise": "Mine", "reps": 5}
+    # The watch now reports just one set. Its second set goes away, and all three of yours stay.
+    save_sets(sb, "me", "s1", [{"position": 1, "exercise": "Press", "reps": 12}])
+    keys = sorted(sb.t["strength_sets"].rows)
+    assert keys == [("s1", "coros", 1), ("s1", "manual", 1), ("s1", "manual", 2), ("s1", "manual", 3)]
+    assert sb.t["strength_sets"].rows[("s1", "manual", 1)]["exercise"] == "Mine"
+    assert sb.t["strength_sets"].rows[("s1", "coros", 1)]["reps"] == 12
+
+
+def test_a_watch_set_is_marked_as_coming_from_the_watch():
+    sb = FakeSb()
+    save_sets(sb, "me", "s1", [{"position": 1, "exercise": "Press", "reps": 10}])
+    assert sb.t["strength_sets"].rows[("s1", "coros", 1)]["source"] == "coros"
+
+
+def test_only_watch_sessions_are_listed_for_reading_details():
+    sb = FakeSb()
+    t = sb.t["strength_sessions"]
+    t.rows[("me", "c1")] = {"coros_id": "c1", "started_at": "x", "detail_fetched_at": None, "source": "coros"}
+    t.rows[("me", None)] = {"coros_id": None, "started_at": "y", "detail_fetched_at": None, "source": "manual"}
+    assert [r["coros_id"] for r in load_sessions(sb)] == ["c1"]

@@ -410,7 +410,7 @@ export async function loadRunExtra(corosId: string): Promise<RunExtra | null> {
 }
 
 
-const STRENGTH_COLUMNS = "id, coros_id, started_at, day, workout_name, duration_s, total_time_s, sets_count, avg_hr, calories, training_load, aerobic_te, anaerobic_te, training_focus, perceived_effort, workout_note, strength_sets(position, exercise, reps, weight_kg, seconds, avg_hr, max_hr)";
+const STRENGTH_COLUMNS = "id, source, coros_id, started_at, day, workout_name, duration_s, total_time_s, sets_count, avg_hr, calories, training_load, aerobic_te, anaerobic_te, training_focus, perceived_effort, workout_note, strength_sets(source, position, exercise, reps, weight_kg, seconds, avg_hr, max_hr)";
 
 /**
  * Strength sessions from the watch between two Paris dates, with their sets. Never throws: if the tables are not
@@ -428,7 +428,7 @@ export async function loadStrength(from: string, to: string): Promise<StrengthSe
     if (error || !data) return [];
     return (data as unknown as (Omit<StrengthSession, "sets"> & { strength_sets: StrengthSession["sets"] })[]).map(({ strength_sets, ...s }) => ({
       ...s,
-      sets: [...strength_sets].sort((a, b) => a.position - b.position),
+      sets: [...strength_sets].sort((a, b) => (a.source === b.source ? a.position - b.position : a.source === "coros" ? -1 : 1)),
     }));
   } catch {
     return [];

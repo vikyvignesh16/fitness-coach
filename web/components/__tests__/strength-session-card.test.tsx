@@ -1,16 +1,19 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { StrengthSessionCard } from "../strength-session-card";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("@/app/(app)/gym/actions", () => ({ addExercisesAction: vi.fn(), addWorkoutAction: vi.fn(), deleteExerciseAction: vi.fn(), deleteWorkoutAction: vi.fn() }));
 import type { StrengthSession } from "@/lib/types";
 
 const base: StrengthSession = {
-  id: "s1", coros_id: "c1", started_at: "2026-11-07T11:29:26Z", day: "2026-11-07", workout_name: "Shoulders and Core Version 1", duration_s: 4159,
+  id: "s1", source: "coros", coros_id: "c1", started_at: "2026-11-07T11:29:26Z", day: "2026-11-07", workout_name: "Shoulders and Core Version 1", duration_s: 4159,
   total_time_s: 5173, sets_count: 41, avg_hr: 110, calories: 482, training_load: 30, aerobic_te: 1.8, anaerobic_te: 0, training_focus: "Recovery",
   perceived_effort: "Easy", workout_note: "Felt good.\nShoulders strong.", sets: [
-    { position: 1, exercise: "Seated Dumbbell Press", reps: 12, weight_kg: 16, seconds: 40, avg_hr: 92, max_hr: 100 },
-    { position: 2, exercise: "Seated Dumbbell Press", reps: 12, weight_kg: 16, seconds: 40, avg_hr: 92, max_hr: 100 },
-    { position: 3, exercise: "Crunch", reps: 15, weight_kg: null, seconds: 30, avg_hr: null, max_hr: null },
+    { source: "coros", position: 1, exercise: "Seated Dumbbell Press", reps: 12, weight_kg: 16, seconds: 40, avg_hr: 92, max_hr: 100 },
+    { source: "coros", position: 2, exercise: "Seated Dumbbell Press", reps: 12, weight_kg: 16, seconds: 40, avg_hr: 92, max_hr: 100 },
+    { source: "coros", position: 3, exercise: "Crunch", reps: 15, weight_kg: null, seconds: 30, avg_hr: null, max_hr: null },
   ],
 };
 
@@ -48,5 +51,28 @@ describe("StrengthSessionCard", () => {
     expect(screen.queryByText("Heart rate")).toBeNull();
     expect(screen.queryByText("Training load")).toBeNull();
     expect(screen.queryByText("0")).toBeNull();
+  });
+
+  it("every session offers to add an exercise, and a watch session cannot be removed", () => {
+    render(<StrengthSessionCard session={base} />);
+    expect(screen.getByRole("button", { name: "Add an exercise" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Remove/ })).toBeNull();
+    expect(screen.queryByText("Added by you")).toBeNull();
+  });
+
+  it("a session you typed in says so and can be removed as a whole", () => {
+    render(<StrengthSessionCard session={{ ...base, source: "manual", coros_id: null, sets: base.sets.map((s) => ({ ...s, source: "manual" as const })) }} />);
+    expect(screen.getByText("Added by you")).toBeInTheDocument();
+    expect(screen.getByText("Typed in by you.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove this workout" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(2); // one for each exercise
+  });
+
+  it("an exercise you added to a watch session is marked and can be removed, the watch's cannot", () => {
+    const mine = { source: "manual" as const, position: 1, exercise: "Row", reps: 10, weight_kg: 30, seconds: null, avg_hr: null, max_hr: null };
+    render(<StrengthSessionCard session={{ ...base, sets: [...base.sets, mine] }} />);
+    expect(screen.getAllByText("Added by you")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Remove this workout" })).toBeNull();
   });
 });

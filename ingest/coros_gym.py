@@ -78,10 +78,14 @@ def session_update(detail: dict, now: str) -> dict:
 
 
 def save_sets(sb, owner: str, session_id: str, sets: list[dict]) -> None:
-    """Upsert the sets by position, then remove any positions past the end, so a shorter session leaves no leftovers."""
+    """Upsert the watch sets by position, then remove watch sets past the end, so a shorter session leaves no leftovers.
+
+    Only rows marked 'coros' are written or removed. Sets Vicky added by hand ('manual') are never touched.
+    """
     for s in sets:
-        sb.table("strength_sets").upsert({**s, "user_id": owner, "session_id": session_id}, on_conflict="session_id,position", default_to_null=False).execute()
-    sb.table("strength_sets").delete().eq("session_id", session_id).gt("position", len(sets)).execute()
+        row = {**s, "user_id": owner, "session_id": session_id, "source": "coros"}
+        sb.table("strength_sets").upsert(row, on_conflict="session_id,source,position", default_to_null=False).execute()
+    sb.table("strength_sets").delete().eq("session_id", session_id).eq("source", "coros").gt("position", len(sets)).execute()
 
 
 def save_one(sb, owner: str, coros_id: str, detail: dict, sets: list[dict], now: str) -> None:
@@ -126,7 +130,8 @@ def run_job(sb, owner: str, fetched: dict, now: datetime, apply: bool) -> dict:
 
 
 def load_sessions(sb) -> list[dict]:
-    rows = sb.table("strength_sessions").select("coros_id, started_at, detail_fetched_at").execute().data
+    # Only the watch's sessions: sessions typed by hand have no COROS id and nothing to read.
+    rows = sb.table("strength_sessions").select("coros_id, started_at, detail_fetched_at").eq("source", "coros").execute().data
     return [{**r, "sport_type": STRENGTH} for r in rows]
 
 
