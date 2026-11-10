@@ -299,3 +299,13 @@ Alternatives: showing VO2max history by reading it from somewhere else (nothing 
 Cost: three of the five charts are nearly empty for now.
 Revisit when: the chest strap has a few weeks of runs, or COROS adds fitness history.
 Status: open
+
+## 2026-11-10 Run details from COROS, saved on the run
+Chose: ingest/coros_run_details.py reads getActivityDetail for each run and saves training load, aerobic and anaerobic training effect, training focus, the Performance word, the Perceived Effort word, your Workout Note, cadence, stride length, power, elevation gain and loss, and the best kilometre on the runs table (migration 0012). Elevation gain uses the existing elevation_m column. The run page shows them in a "From your watch" card.
+How: runs never read come first, newest first. Runs from the last 7 days are read again after 3 hours, because the effort word and the note are added in COROS after the run. At most 15 runs per pass. It is called at the end of the 15 minute runs job and wrapped so it can never make that job fail (it logs "Run details skipped" and the type of error, nothing else). One run failing never stops the others.
+Rules in code, with tests: a field COROS does not have is not written, and a number we hold is never blanked. Only the two fields you can edit in COROS (effort and note) are cleared if COROS no longer has them. "--" and "N/A" mean nothing, not a value. The note is read from after its label to the end, so a note that looks like a field cannot change the numbers. A format we do not recognise raises. The job report lists the effort and focus words it saw and how many runs had a note, never the note text. The run page loader never throws, so the page opens even before the migration is applied.
+Privacy: your note is stored in your database under the same login protection as everything else and never goes to COROS. Decided with Vicky on 2026-11-10: a later run insight (one OpenRouter call comparing the plan with the run) may include the note. I will ask again before the first call that sends it. Until the evidence library and the spending cap exist (tasks 10 and 11) that insight is not built.
+Alternatives: a separate Railway service (rejected: one more thing to set up, and the runs job already has the login); a separate table (rejected: every use joins it to runs anyway).
+Cost: about 94 calls once for your old runs, then a few a day. COROS publishes no limit for this tool, so the backfill goes in batches.
+Revisit when: COROS pushes back with errors, or the effort words show a scale worth turning into a number.
+Status: open

@@ -7,7 +7,7 @@ import { isRestDay } from "@/lib/labels";
 import { runState, upcomingRuns, waitingCount, type ApprovalRow, type RunState, type UpcomingRun } from "@/lib/watch-approve";
 import { addDays, checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLocal } from "@/lib/weeks";
 import { diffPlans, notesAdded, watchImpact, type DayChange, type DraftPlan } from "@/lib/proposal-diff";
-import type { HealthDay, PlanDay, PlanWeek, RecoverySnapshot, RunRow } from "@/lib/types";
+import type { HealthDay, RunExtra, PlanDay, PlanWeek, RecoverySnapshot, RunRow } from "@/lib/types";
 import { BASELINE_DAYS } from "@/lib/insights-kpis";
 import type { InsightsRange } from "@/lib/insights-range";
 
@@ -508,4 +508,24 @@ export async function loadFitnessContext(): Promise<FitnessContext> {
   const planTypes: Record<string, string> = {};
   for (const d of days as unknown as { date: string; type: string | null }[]) if (d.type) planTypes[d.date] = d.type;
   return { planTypes, targets: version.targets as unknown as GoalTargets };
+}
+
+
+/**
+ * The extra COROS details for one run. Never throws: if the details columns are not there yet or the read fails,
+ * the run page still opens and says nothing has arrived.
+ */
+export async function loadRunExtra(corosId: string): Promise<RunExtra | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("runs")
+      .select("training_load, aerobic_te, anaerobic_te, training_focus, performance, perceived_effort, workout_note, cadence_spm, stride_length_m, power_w, elevation_m, elev_loss_m, best_km_pace_s, detail_fetched_at")
+      .eq("coros_id", corosId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as unknown as RunExtra;
+  } catch {
+    return null;
+  }
 }
