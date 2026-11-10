@@ -90,8 +90,10 @@ def parse_strength_sets(text: str) -> list[dict]:
     set is never dropped by mistake. Weights come in grams.
     """
     data = json.loads(_unwrap(text))
-    if not isinstance(data, dict) or "columns" not in data or not data.get("lapGroups"):
+    if not isinstance(data, dict) or "columns" not in data or "lapGroups" not in data:
         raise ValueError("Unexpected COROS response: no set by set data.")
+    if not data["lapGroups"]:
+        return []  # sessions logged without exercise detail (older ones) have no sets, and that is a real answer
     columns = [c["name"] for c in data["columns"]]
     for needed in ("exerciseNameKey", "reps", "weight"):
         if needed not in columns:

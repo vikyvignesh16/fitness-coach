@@ -161,9 +161,18 @@ def test_a_timed_hold_with_no_reps_gives_no_sets_rather_than_a_guess():
     assert parse_strength_sets(sets_json([lap(1, "Wall Sit", 0, 0), lap(2, "Wall Sit", 0, 0)])) == []
 
 
+def test_a_session_logged_without_exercise_detail_has_no_sets_and_that_is_not_an_error():
+    empty = json.dumps({"source": "activityDetail", "columns": [{"name": "exerciseNameKey"}], "lapGroups": [], "sportDataDetails": []})
+    assert parse_strength_sets(empty) == []
+
+
 def test_unexpected_set_data_raises():
     with pytest.raises(ValueError, match="no set by set data"):
-        parse_strength_sets(json.dumps({"columns": [], "lapGroups": []}))
+        parse_strength_sets(json.dumps({"columns": []}))  # no lapGroups at all
+    with pytest.raises(ValueError, match="no set by set data"):
+        parse_strength_sets(json.dumps({"lapGroups": []}))  # no columns at all
+    with pytest.raises(ValueError, match="no set by set data"):
+        parse_strength_sets(json.dumps(["not", "a", "dict"]))
     with pytest.raises(ValueError, match="'weight' column"):
         parse_strength_sets(json.dumps({"columns": [{"name": "exerciseNameKey"}, {"name": "reps"}], "lapGroups": [{"laps": []}]}))
 
