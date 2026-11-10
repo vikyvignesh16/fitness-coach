@@ -361,3 +361,13 @@ Two choices I made that you can change: stress is compared with the 28 days befo
 Alternatives: your own 28 night HRV average as the baseline (rejected, COROS's is the one you see in the app); leaving rest days out (rejected, they show what an easy day does); advice text now (rejected, the rule says health claims cite the evidence library).
 Revisit when: there are a few months of pairs, or the evidence library exists.
 Status: open
+
+## 2026-11-10 Agent lesson 1: one model call through ADK, with a spending cap
+Chose: Google ADK 2.13.0 with LiteLLM 1.106.2 (both pinned, both older than two weeks; ADK needs LiteLLM below 1.106.3) calling openai/gpt-6-luna through OpenRouter. Prices from OpenRouter's model list on 10 Nov 2026: Luna $0.10 in and $0.50 out per million tokens, Sol $2 and $10.
+The cap: a plain tested function (coach/budget.py), $10 a month by default, stored in coach_settings (you can change your own row), month resets on the 1st Paris time. It runs in ADK's before_model_callback, so a blocked call never reaches the model. Every call and every block is logged in llm_calls (migration 0017): tokens, cost, ok, a short error name. Never the question or the answer.
+Choices and alternatives: ADK callbacks for the guard (alternative: a wrapper function around every call, rejected because a future tool or agent could forget to use it). Our own price table (alternative: read the cost OpenRouter returns, rejected for now because an unknown model should fail loudly and the table is tested; revisit if prices change often). Dollars as Decimal, not float, so the sums are exact.
+Found by running it: (1) the reply included the model's private reasoning summary (a "thought" part), so the script now prints only non thought parts. (2) My first cap demo did not block, because my guess of the first call's cost was wrong. The guard was right. A real call cost about $0.00005 to $0.00007.
+Known limit: the check happens before a call, so the call that crosses the cap can overshoot by its own cost. The cap does not yet count a call that is already running when another starts. Fine for one user.
+Not yet checked: that the thought filter works on a fresh call (needs one more paid call of a fraction of a cent).
+Revisit when: a model or price changes, or we use Sol, which is 20 times dearer.
+Status: open
