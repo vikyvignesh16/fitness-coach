@@ -25,3 +25,7 @@ Words from the agent lessons, in plain language. It grows with each lesson.
 * **Round**: one trip through the loop (model, then maybe tool). We cap the rounds, because a loop with no limit can run up a bill.
 * **Grounding**: giving the model real data through a tool, so it reads numbers instead of guessing them. It lowers hallucination but does not remove it.
 * **Dependency injection**: passing a part in from outside (here, the function that reads data) so tests and demos can swap in a fake.
+* **Parallel tool calls**: a model may ask for several tools in one turn. ADK delivers them in one event and runs them together. A printout that shows only the first one hides what really happened.
+* **Tool registry**: one list of every tool the agent may use, with the tables each one reads. To govern the agent you review this list. A shared test checks every tool in it against the design rules.
+* **Flag**: a fact about one number that code worked out, like "slept under 6 hours". Facts only, never advice.
+* **Drift guard**: a test that fails if two copies of the same rule (here the Python and TypeScript flag limits) stop matching.

@@ -388,3 +388,12 @@ Real run on invented rows: 3 steps (the model asked for the tool with days=7, ou
 Known limits: the tool is read only, and tools run with the service role key in this practice script. In the service (lesson 9) they must run as the signed in user, so Row Level Security protects the data. A bigger tool result means more input tokens, so keep results small.
 Alternatives: letting the model write SQL (rejected: far too much power, and a mistake could read or change anything); one big tool returning everything (rejected: slow, expensive and unfocused).
 Status: open
+
+## 2026-11-10 Agent lesson 4: more tools, flags, a registry and shared design rules
+Chose: three read only tools in coach/registry.py (the one place to see what the agent can do): get_recent_health (now with per day flags and counts), get_recent_runs (up to 30 days, the newest 20 runs, never notes), get_plan_day (one date, summary of the run and gym only, newest plan version, read only).
+Flags (coach/health_flags.py): code works out facts such as "slept under 6 hours", "HRV below your COROS normal range", load ratio above 1.3, recovery under 50%. Facts only, no advice. The limits are the ones approved for the Insights card. A test reads web/lib/insights-flags.ts and fails if the Python and TypeScript numbers differ (the drift guard). Checks that need a 28 day average or several days in a row stay on the Insights card.
+Shared rules test (coach/tests/test_tool_rules.py): every tool in the registry must have a type hint and a docstring line for each input, return an error and never read data on bad input, return a small result even with huge data, never return notes, and the tool files may not contain a write call. Mutation checks: eight deliberate breaks, all caught after I closed one gap (notes in the database query).
+Found by running it: (1) my event printer showed only the first of three tool calls. The model asks for several tools at once and ADK delivers them in one event. Fixed, and the printer now lists them all. (2) The same question on invented data gave two different answers. The first stated sleep figures (7h50 and 8h) that were in no row, the second matched the data exactly. Nothing in our code caught the first. This is the case for evals (lesson 8): a single good run proves little.
+Cost: eight small calls so far on invented data, total under $0.002.
+Alternatives: the model writing queries (rejected: far too much power); one tool that returns everything (rejected: large, slow, costly, and it would carry private notes).
+Status: open

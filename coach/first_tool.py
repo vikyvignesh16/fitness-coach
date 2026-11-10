@@ -19,11 +19,11 @@ from google.genai import types
 from coach.first_call import APP, MODEL
 from coach.guard import ModelGuard
 from coach.llm_log import cap_for, month_spend
-from coach.tools import health_fetcher, make_health_tool, today_paris
+from coach.registry import Readers, build_tools, supabase_readers
 from ingest.import_plan import find_owner
 
 INSTRUCTIONS = (
-    "You are a calm running coach for one runner, Vicky. Use the tool to look at her watch numbers before you answer "
+    "You are a calm running coach for one runner, Vicky. Use your tools to look at her watch numbers, runs and plan before you answer "
     "any question about sleep, recovery or how her body is coping. Never guess a number the tool did not give you. "
     "Answer in three short sentences at most. Use ranges for anything you estimate. This is not medical advice."
 )
@@ -41,17 +41,23 @@ def invented_fetch(first: str, last: str) -> list[dict]:
     return out[1:]  # leave the first day out so the "days without data" count is visible
 
 
-def describe(event) -> str | None:
-    """One line for each kind of step the loop takes."""
+def invented_readers() -> Readers:
+    plan = {"date": "2026-11-08", "run": {"type": "long_run", "distance_km": 16, "duration_min": 100, "pace_or_effort": "easy, RPE 3 to 4"},
+            "gym": {"session": "", "key_exercises": []}}
+    runs = [{"started_at": "2026-11-08T08:00:00+00:00", "distance_km": 19.2, "duration_s": 6600, "avg_hr": 158, "training_load": 240, "perceived_effort": "Hard"}]
+    return Readers(health=invented_fetch, runs=lambda a, b: runs, plan_day=lambda d: plan if d == "2026-11-08" else None)
+
+
+def describe(event) -> list[str]:
+    """One line for each thing that happened in this event. A model can ask for several tools at once."""
+    lines = []
     for call in event.get_function_calls():
-        return f"MODEL ASKS for tool {call.name} with inputs {dict(call.args)}"
+        lines.append(f"MODEL ASKS for tool {call.name} with inputs {dict(call.args)}")
     for resp in event.get_function_responses():
-        body = resp.response or {}
-        size = f"{len(body.get('days', []))} days" if "days" in body else str(body)[:100]
-        return f"OUR CODE RAN {resp.name} and handed back: {size}"
+        lines.append(f"OUR CODE RAN {resp.name} and handed back: {str(resp.response)[:140]}")
     if event.is_final_response() and event.content and event.content.parts:
-        return "FINAL ANSWER: " + "".join(p.text or "" for p in event.content.parts if not p.thought)
-    return None
+        lines.append("FINAL ANSWER: " + "".join(p.text or "" for p in event.content.parts if not p.thought))
+    return lines
 
 
 async def run(agent: LlmAgent, question: str) -> None:
@@ -61,7 +67,7 @@ async def run(agent: LlmAgent, question: str) -> None:
     msg = types.Content(role="user", parts=[types.Part(text=question)])
     step = 0
     async for event in runner.run_async(user_id="vicky", session_id="s1", new_message=msg):
-        if (line := describe(event)):
+        for line in describe(event):
             step += 1
             print(f"  step {step}. {line}")
 
@@ -70,7 +76,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", action="store_true")
     parser.add_argument("--real-data", action="store_true", help="send your real watch numbers to the model")
-    parser.add_argument("--question", default="How did I sleep over the last week, and is anything worth watching?")
+    parser.add_argument("--question", default="Was my run on 8 November harder than the plan said, and how did I sleep around it?")
     args = parser.parse_args()
 
     load_dotenv()
@@ -81,10 +87,10 @@ def main() -> None:
     if not args.run:
         print("Dry run. Add --run to make the call.")
         return
-    fetch = health_fetcher(sb, owner) if args.real_data else invented_fetch
+    readers = supabase_readers(sb, owner) if args.real_data else invented_readers()
     guard = ModelGuard(sb, owner, purpose="first_tool", model=MODEL)
     agent = LlmAgent(name="coach", model=LiteLlm(model=f"openrouter/{MODEL}"), instruction=INSTRUCTIONS,
-                     tools=[make_health_tool(fetch)],
+                     tools=[spec.fn for spec in build_tools(readers)],
                      before_model_callback=guard.before_model, after_model_callback=guard.after_model)
     print(f"Question: {args.question}")
     asyncio.run(run(agent, args.question))
