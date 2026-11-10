@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BigStat } from "@/components/big-stat";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadRunDetail } from "@/lib/data";
+import { RunDetailsCard } from "@/components/run-details-card";
+import { loadRunDetail, loadRunExtra } from "@/lib/data";
 import { formatDuration, formatKm, formatPace } from "@/lib/format";
 import { isRestDay, runLabel } from "@/lib/labels";
 import { localDate, matchRunsToDays, plannedKm } from "@/lib/runs";
@@ -12,7 +13,7 @@ import { dayMonth, weekdayShort } from "@/lib/weeks";
 
 export default async function RunDetailPage(props: PageProps<"/runs/[id]">) {
   const { id } = await props.params;
-  const detail = await loadRunDetail(id);
+  const [detail, extra] = await Promise.all([loadRunDetail(id), loadRunExtra(id)]);
   if (!detail) notFound();
 
   const { run, plannedDay, dayRuns } = detail;
@@ -64,6 +65,8 @@ export default async function RunDetailPage(props: PageProps<"/runs/[id]">) {
           )}
         </CardContent>
       </Card>
+
+      <RunDetailsCard extra={extra} />
 
       <p className="text-muted-foreground text-sm">Pace and heart rate charts, laps and personal records come in a later step.</p>
     </>

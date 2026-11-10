@@ -129,3 +129,21 @@ export type RecoverySnapshot = {
   level: string | null;
   full_recovery_h: number | null;
 };
+
+/** What COROS knows about a run beyond the list (migration 0012). Every field can be null: null means COROS had nothing. */
+export type RunExtra = {
+  training_load: number | null;
+  aerobic_te: number | null;
+  anaerobic_te: number | null;
+  training_focus: string | null;
+  performance: string | null;
+  perceived_effort: string | null;
+  workout_note: string | null;
+  cadence_spm: number | null;
+  stride_length_m: number | null;
+  power_w: number | null;
+  elevation_m: number | null;
+  elev_loss_m: number | null;
+  best_km_pace_s: number | null;
+  detail_fetched_at: string | null;
+};

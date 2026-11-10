@@ -15,6 +15,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
 from ingest import coros_auth as auth
+from ingest.coros_run_details import update_details_safely
 from ingest.import_plan import find_owner
 
 RUN_CODES = [100, 101, 102, 103]  # COROS run sport types
@@ -128,8 +129,10 @@ def main() -> None:
     if not args.apply:
         print(f"Dry run: {len(runs)} runs found. Pass --apply to save.")
         return
-    save_runs(sb, find_owner(sb), runs)
+    owner = find_owner(sb)
+    save_runs(sb, owner, runs)
     print(f"Saved {len(runs)} runs.")
+    print(update_details_safely(sb, owner, token, mcp_url))  # run details are a bonus and never fail this job
 
 
 if __name__ == "__main__":
