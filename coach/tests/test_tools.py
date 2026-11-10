@@ -88,3 +88,9 @@ def test_loop_stops_after_the_round_limit():
     forever = lambda messages: {"tool": "get_recent_health", "args": {"days": 1}}
     answer, messages = run_loop(forever, {"get_recent_health": tool()[0]}, "x")
     assert answer.startswith("Stopped") and sum(m["role"] == "tool" for m in messages) == MAX_ROUNDS
+
+
+def test_the_limit_is_fourteen_days_written_out_not_read_from_the_code():
+    t, calls = tool()
+    assert MAX_DAYS == 14
+    assert "error" in t(days=15) and "error" not in t(days=14) and "error" not in t(days=1)
