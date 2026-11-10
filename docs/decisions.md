@@ -350,3 +350,14 @@ Not checked by me: how the table looks styled, in a browser. The tests cover the
 Alternatives: a table only (rejected: it needs sideways scrolling on a phone); showing the whole note in the table (rejected: one long note would stretch a row across the screen).
 Revisit when: you want sorting by more columns, or a search.
 Status: open
+
+## 2026-11-10 Insights steps C and D: two scatter charts and the "what needs a look" card
+Chose, chart 16 (training load and next morning HRV): one dot per day. Across is that day's COROS training load. Up is the next morning's HRV minus COROS's own baseline for that date, in milliseconds. A rest day counts as zero load only when the watch recorded that day. A day with workouts but no COROS load figure is left out, not counted as zero. A day with no HRV the next morning is left out. Every left out day is counted under the chart.
+Chart 15 (how it felt and that morning's HRV): one dot per workout. Across is your effort word on a five step scale (Very Easy, Easy, Moderate, Hard, Very Hard, the order you gave me). Up is the HRV from the morning of that workout. Words outside the scale, such as "Very Tired", workouts with no word, and workouts with no HRV are left out and counted.
+Both are exploratory: no trend line, no cause claims, and a note says how few dots there are. Each has a data table and a "How to read" guide with Sam.
+"What needs a look" card: six checks on your own numbers, with the limits you approved. HRV under the COROS normal range on 3 of the last 7 nights. Resting heart rate 5 or more bpm over the 28 day average, 3 days in a row. Under 6 hours asleep on 3 of the last 7 nights. Training load ratio above 1.3 for 3 days in a row. 7 day average stress 10 or more over the 28 days before that week. Last recovery reading of the day under 50% on 2 days in a row. The limits live in FLAG_LIMITS in web/lib/insights-flags.ts, with tests.
+Rules: a check with too little data says "not run" and never counts as a pass. Nights checks need at least 5 of the last 7 nights with data. A "days in a row" check needs the newest day to be today or yesterday. The card states facts only and gives no advice, because the evidence library is empty. Advice with cited sources comes after Task 10.
+Two choices I made that you can change: stress is compared with the 28 days before the week, so a bad week does not pull its own yardstick up. Recovery uses the last reading of each day, because only that and the day's lowest and highest are stored, not the morning reading.
+Alternatives: your own 28 night HRV average as the baseline (rejected, COROS's is the one you see in the app); leaving rest days out (rejected, they show what an easy day does); advice text now (rejected, the rule says health claims cite the evidence library).
+Revisit when: there are a few months of pairs, or the evidence library exists.
+Status: open

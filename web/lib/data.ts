@@ -351,7 +351,7 @@ export async function loadInsights(range: InsightsRange, today: string): Promise
   const supabase = await createClient();
   const [kpi, inRange, snap, todaySnaps] = await Promise.all([
     supabase.from("health_daily").select(HEALTH_COLUMNS).gte("day", addDays(today, -KPI_LOOKBACK_DAYS)).order("day"),
-    supabase.from("health_daily").select(HEALTH_COLUMNS).gte("day", addDays(range.from, -BASELINE_DAYS)).lte("day", range.to).order("day"),
+    supabase.from("health_daily").select(HEALTH_COLUMNS).gte("day", addDays(range.from, -BASELINE_DAYS)).lte("day", addDays(range.to, 1)).order("day"),
     supabase.from("recovery_snapshots").select("taken_at, recovery_pct, level, full_recovery_h").order("taken_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("recovery_snapshots").select("taken_at, recovery_pct, level, full_recovery_h").eq("day", today).order("taken_at"),
   ]);

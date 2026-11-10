@@ -1,4 +1,6 @@
 import { RecoveryChart, RecoveryToday, StressChart, LoadPerSlotChart } from "@/components/insights/activity-charts";
+import { LoadHrvChart, EffortHrvChart } from "@/components/insights/scatter-charts";
+import { NeedsWorkCard } from "@/components/insights/needs-work-card";
 import { WorkoutHistory } from "@/components/insights/workout-history";
 import { LoadKindFilter } from "@/components/insights/load-kind-filter";
 import { ChartCard } from "@/components/insights/chart-card";
@@ -13,14 +15,26 @@ import { KpiCard } from "@/components/insights/kpi-card";
 import { RangeControls } from "@/components/insights/range-controls";
 import { loadFitnessContext, loadInsights, loadRuns, loadStrength, loadWorkoutRuns } from "@/lib/data";
 import { efficiencyPoints, fitnessSeries, goalsFromTargets, longRunPerWeek } from "@/lib/insights-fitness";
+import { buildFlags } from "@/lib/insights-flags";
+import { effortVsHrv, loadVsNextHrv } from "@/lib/insights-scatter";
 import { buildKpis } from "@/lib/insights-kpis";
 import { parseInsightsRange } from "@/lib/insights-range";
 import {
   buildSlots, hrvSeries, intradayPoints, loadPerSlot, loadSeries, recoverySeries, restingHrSeries, sleepComposition, sleepScore, stressSeries, weeklyVolume,
 } from "@/lib/insights-series";
-import { efficiencyTable, fitnessTable, hrvTable, loadPerSlotTable, loadTable, longRunTable, recoveryTable, rhrTable, scoreTable, sleepTable, stressTable, volumeTable } from "@/lib/insights-tables";
+import { effortHrvTable, efficiencyTable, fitnessTable, loadHrvTable, hrvTable, loadPerSlotTable, loadTable, longRunTable, recoveryTable, rhrTable, scoreTable, sleepTable, stressTable, volumeTable } from "@/lib/insights-tables";
 import { todayLocal } from "@/lib/weeks";
 import { buildWorkoutRows, ROWS_SHOWN } from "@/lib/workout-table";
+
+/** Says how few dots there are, and how many were left out and why. A missing value is never drawn as zero. */
+const PairNote = ({ count, items }: { count: number; items: [number, string][] }) => {
+  const left = items.filter(([n]) => n > 0).map(([n, why]) => `${n} ${why}`);
+  return (
+    <p className="text-muted-foreground text-xs">
+      {count} {count === 1 ? "dot" : "dots"}, which is a small number, so read the pattern gently.{left.length ? ` Left out: ${left.join(", ")}.` : ""}
+    </p>
+  );
+};
 
 const SectionHead = ({ title, note }: { title: string; note: string }) => (
   <div>
@@ -53,6 +67,9 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
   const intraday = intradayPoints(todaySnapshots, today);
   const loadDays = loadPerSlot(runs, strength, slots, range.loadKind);
   const workouts = buildWorkoutRows({ runs: tableRuns, sessions: strength, planTypes: plan.planTypes, show: range.workouts, sort: range.sort });
+  const loadHrv = loadVsNextHrv(rows, runs, strength, range);
+  const effortHrv = effortVsHrv(rows, tableRuns, strength);
+  const flags = buildFlags(kpiRows, today);
   const unit = view === "daily" ? "night" : "week";
 
   return (
@@ -62,6 +79,8 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
       <section aria-label="Today" className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         {kpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
       </section>
+
+      <NeedsWorkCard flags={flags} />
 
       <HowToRead />
 
@@ -136,6 +155,22 @@ export default async function InsightsPage(props: PageProps<"/insights">) {
           <ChartCard title="Running efficiency" purpose="Are you getting faster at the same effort? Only easy runs are shown. Wrist heart rate can be off, so this sharpens as chest strap runs arrive."
             hasData={efficiency.length > 0} table={efficiencyTable(efficiency)} howTo={HOW_TO.efficiency} controls={<EfficiencyFilter range={range} />}>
             <EfficiencyChart data={efficiency} today={today} />
+          </ChartCard>
+        </div>
+      </section>
+
+      <section aria-label="Patterns" className="space-y-3">
+        <SectionHead title="Patterns to explore" note="Small sets of dots. They show what lined up in this range, not what caused what." />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ChartCard title="Training load and next morning HRV" purpose="Did a harder day leave your HRV lower the next morning? Rest days count as zero load."
+            hasData={loadHrv.points.length > 0} table={loadHrvTable(loadHrv.points)} howTo={HOW_TO.loadhrv}>
+            <LoadHrvChart data={loadHrv.points} />
+            <PairNote count={loadHrv.points.length} items={[[loadHrv.leftOut.noNextHrv, "with no HRV the next morning"], [loadHrv.leftOut.unscored, "with workouts but no COROS load figure"], [loadHrv.leftOut.noWatchData, "with no watch data"]]} />
+          </ChartCard>
+          <ChartCard title="How it felt and that morning's HRV" purpose="Did you rate a workout harder on mornings when your HRV was lower?"
+            hasData={effortHrv.points.length > 0} table={effortHrvTable(effortHrv.points)} howTo={HOW_TO.effort}>
+            <EffortHrvChart data={effortHrv.points} />
+            <PairNote count={effortHrv.points.length} items={[[effortHrv.leftOut.noEffort, "with no rating"], [effortHrv.leftOut.unknownWord, "with a word not on the five step scale"], [effortHrv.leftOut.noHrv, "with no HRV that morning"]]} />
           </ChartCard>
         </div>
       </section>
