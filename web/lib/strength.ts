@@ -4,6 +4,8 @@ export type SetLabel = { short: string; long: string }; // "12 × 22 kg" for the
 
 export type ExerciseSummary = {
   exercise: string;
+  manual: boolean; // typed in by Vicky, not recorded by the watch
+  positions: number[]; // the position of each set, so a manual exercise can be deleted precisely
   sets: SetLabel[]; // one for every set, in the order done
   volumeKg: number; // reps times weight, added up. Body weight sets add nothing.
 };
@@ -17,15 +19,20 @@ export function setLabel(n: number, reps: number | null, kg: number | null): Set
   return { short, long };
 }
 
+/** Watch sets first, then the ones Vicky added, each in the order done. */
+const byWhoThenPosition = (a: StrengthSet, b: StrengthSet) =>
+  a.source === b.source ? a.position - b.position : a.source === "coros" ? -1 : 1;
+
 /** Group the sets of a session by exercise, in the order done. Every set stays its own entry. */
 export function summariseSets(sets: StrengthSet[]): ExerciseSummary[] {
   const out: ExerciseSummary[] = [];
-  for (const s of [...sets].sort((a, b) => a.position - b.position)) {
+  for (const s of [...sets].sort(byWhoThenPosition)) {
     let block = out[out.length - 1];
-    if (!block || block.exercise !== s.exercise) {
-      block = { exercise: s.exercise, sets: [], volumeKg: 0 };
+    if (!block || block.exercise !== s.exercise || block.manual !== (s.source === "manual")) {
+      block = { exercise: s.exercise, manual: s.source === "manual", positions: [], sets: [], volumeKg: 0 };
       out.push(block);
     }
+    block.positions.push(s.position);
     block.sets.push(setLabel(block.sets.length + 1, s.reps, s.weight_kg));
     block.volumeKg += (s.reps ?? 0) * (s.weight_kg ?? 0);
   }

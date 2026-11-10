@@ -5,12 +5,12 @@ import { StrengthSessionCard } from "../strength-session-card";
 import type { StrengthSession } from "@/lib/types";
 
 const base: StrengthSession = {
-  id: "s1", coros_id: "c1", started_at: "2026-11-07T11:29:26Z", day: "2026-11-07", workout_name: "Shoulders and Core Version 1", duration_s: 4159,
+  id: "s1", source: "coros", coros_id: "c1", started_at: "2026-11-07T11:29:26Z", day: "2026-11-07", workout_name: "Shoulders and Core Version 1", duration_s: 4159,
   total_time_s: 5173, sets_count: 41, avg_hr: 110, calories: 482, training_load: 30, aerobic_te: 1.8, anaerobic_te: 0, training_focus: "Recovery",
   perceived_effort: "Easy", workout_note: "Felt good.\nShoulders strong.", sets: [
-    { position: 1, exercise: "Seated Dumbbell Press", reps: 12, weight_kg: 16, seconds: 40, avg_hr: 92, max_hr: 100 },
-    { position: 2, exercise: "Seated Dumbbell Press", reps: 12, weight_kg: 16, seconds: 40, avg_hr: 92, max_hr: 100 },
-    { position: 3, exercise: "Crunch", reps: 15, weight_kg: null, seconds: 30, avg_hr: null, max_hr: null },
+    { source: "coros", position: 1, exercise: "Seated Dumbbell Press", reps: 12, weight_kg: 16, seconds: 40, avg_hr: 92, max_hr: 100 },
+    { source: "coros", position: 2, exercise: "Seated Dumbbell Press", reps: 12, weight_kg: 16, seconds: 40, avg_hr: 92, max_hr: 100 },
+    { source: "coros", position: 3, exercise: "Crunch", reps: 15, weight_kg: null, seconds: 30, avg_hr: null, max_hr: null },
   ],
 };
 

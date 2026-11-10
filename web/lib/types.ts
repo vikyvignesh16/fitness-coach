@@ -150,7 +150,8 @@ export type RunExtra = {
 
 /** A strength set as the COROS watch recorded it (migration 0013). weight_kg is null for body weight. */
 export type StrengthSet = {
-  position: number;
+  source: "coros" | "manual"; // the watch, or typed in by Vicky
+  position: number; // numbered separately for each source
   exercise: string;
   reps: number | null;
   weight_kg: number | null;
@@ -162,7 +163,8 @@ export type StrengthSet = {
 /** A strength session from COROS. Any number can be null: null means COROS had nothing, which is not zero. */
 export type StrengthSession = {
   id: string;
-  coros_id: string;
+  source: "coros" | "manual";
+  coros_id: string | null; // null for a session typed in by hand
   started_at: string;
   day: string; // yyyy-mm-dd, Paris date
   workout_name: string | null;
