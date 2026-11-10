@@ -6,7 +6,7 @@ const today = "2026-11-09";
 describe("parseInsightsRange", () => {
   it("defaults to the last 7 days, today included", () => {
     expect(parseInsightsRange({}, today)).toEqual({
-      preset: "7", from: "2026-11-03", to: today, days: 7, view: "daily", dist: "all", notice: null,
+      preset: "7", from: "2026-11-03", to: today, days: 7, view: "daily", dist: "all", loadKind: "all", notice: null,
     });
   });
 
@@ -21,7 +21,7 @@ describe("parseInsightsRange", () => {
 
   it("reads a custom range and counts both end days", () => {
     expect(parseInsightsRange({ range: "custom", from: "2026-10-01", to: "2026-10-31" }, today)).toEqual({
-      preset: "custom", from: "2026-10-01", to: "2026-10-31", days: 31, view: "daily", dist: "all", notice: null,
+      preset: "custom", from: "2026-10-01", to: "2026-10-31", days: 31, view: "daily", dist: "all", loadKind: "all", notice: null,
     });
   });
 
@@ -80,6 +80,21 @@ describe("distance filter", () => {
     const r = parseInsightsRange({ range: "30", dist: "5-10" }, today);
     expect(insightsHref(r, { preset: "90" })).toBe("/insights?range=90&view=daily&dist=5-10");
     expect(insightsHref(r, { dist: "all" })).toBe("/insights?range=30&view=daily");
+  });
+});
+
+describe("load filter", () => {
+  it("reads run and strength, and anything else means all", () => {
+    expect(parseInsightsRange({ load: "run" }, today).loadKind).toBe("run");
+    expect(parseInsightsRange({ load: "strength" }, today).loadKind).toBe("strength");
+    expect(parseInsightsRange({ load: "cycling" }, today).loadKind).toBe("all");
+  });
+
+  it("is kept with the range, the view and the distance, and left out when it is all", () => {
+    const r = parseInsightsRange({ range: "30", dist: "5-10", load: "run" }, today);
+    expect(insightsHref(r, { preset: "90" })).toBe("/insights?range=90&view=daily&dist=5-10&load=run");
+    expect(insightsHref(r, { loadKind: "all" })).toBe("/insights?range=30&view=daily&dist=5-10");
+    expect(insightsHref(parseInsightsRange({ range: "30" }, today), { loadKind: "strength" })).toBe("/insights?range=30&view=daily&load=strength");
   });
 });
 

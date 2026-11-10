@@ -1,8 +1,8 @@
 import { baselineBefore, BASELINE_DAYS } from "./insights-kpis";
-import type { InsightsRange, View } from "./insights-range";
+import type { InsightsRange, LoadKind, View } from "./insights-range";
 import { localDate } from "./runs";
-import type { HealthDay, RunRow } from "./types";
-import { addDays, dayMonth, mondayOf } from "./weeks";
+import type { HealthDay, RecoverySnapshot, RunRow, StrengthSession } from "./types";
+import { addDays, dayMonth, HOME_TIME_ZONE, mondayOf } from "./weeks";
 
 /** A night 1.5 standard deviations under your own recent average is marked as unusually low. Display only, not advice. */
 export const LOW_SCORE_SD = 1.5;
@@ -152,6 +152,48 @@ export function restingHrSeries(rows: HealthDay[], slots: Slot[], view: View): R
   return markIsolated(points, (p) => p.rhr);
 }
 
+// ---- 5. Stress ----
+export type StressPoint = { key: string; label: string; stress: number | null; baseline: number | null; isolated: boolean };
+
+export function stressSeries(rows: HealthDay[], slots: Slot[], view: View): StressPoint[] {
+  const map = byDay(rows);
+  const points = slots.map((s) => ({
+    key: s.key, label: s.label,
+    stress: round(slotMean(map, s, (r) => r.stress_avg), view === "daily" ? 0 : 1),
+    baseline: round(baselineBefore(rows, (r) => r.stress_avg, s.days[s.days.length - 1])),
+    isolated: false,
+  }));
+  return markIsolated(points, (p) => p.stress);
+}
+
+// ---- 6. Recovery status ----
+export type RecoveryPoint = { key: string; label: string; last: number | null; min: number | null; max: number | null; band: [number, number] | null; isolated: boolean };
+
+/** One point per day: the last recovery value of the day, with the day's lowest and highest as a band. Weekly averages them. */
+export function recoverySeries(rows: HealthDay[], slots: Slot[], view: View): RecoveryPoint[] {
+  const map = byDay(rows);
+  const points = slots.map((s) => {
+    const last = round(slotMean(map, s, (r) => r.recovery_last), view === "daily" ? 0 : 1);
+    const min = round(slotMean(map, s, (r) => r.recovery_min), 0);
+    const max = round(slotMean(map, s, (r) => r.recovery_max), 0);
+    return { key: s.key, label: s.label, last, min, max, band: min !== null && max !== null ? ([min, max] as [number, number]) : null, isolated: false };
+  });
+  return markIsolated(points, (p) => p.last);
+}
+
+export type IntradayPoint = { at: string; label: string; pct: number; level: string | null };
+
+/** The recovery snapshots taken on one Paris day, in time order, for the "today so far" line. */
+export function intradayPoints(snapshots: RecoverySnapshot[], day: string): IntradayPoint[] {
+  return snapshots
+    .filter((s) => localDate(s.taken_at) === day)
+    .sort((a, b) => a.taken_at.localeCompare(b.taken_at))
+    .map((s) => ({
+      at: s.taken_at, pct: s.recovery_pct, level: s.level,
+      label: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: HOME_TIME_ZONE }).format(new Date(s.taken_at)),
+    }));
+}
+
 // ---- 9. Short-term against long-term load (COROS's own numbers) ----
 export type LoadPoint = { key: string; label: string; short: number | null; long: number | null; ratio: number | null; status: string | null; isolated: boolean };
 
@@ -207,4 +249,39 @@ export function weeklyVolume(runs: RunRow[], range: Pick<InsightsRange, "from" |
     });
   }
   return out;
+}
+
+// ---- 8. Training load, added up from your workouts ----
+export type LoadSlot = {
+  key: string; label: string;
+  run: number; strength: number; // load added up for each kind, 0 when there was none of it
+  total: number | null; // null when there were workouts but none had a load figure: that is missing, not zero
+  workouts: number; unscored: number; // how many workouts, and how many of them have no load figure
+};
+
+/**
+ * Training load for each day or week: the COROS load of every run and gym session added up.
+ * No workouts means a real zero. Workouts that COROS gave no load for are counted as unscored, never as zero.
+ */
+export function loadPerSlot(runs: RunRow[], sessions: StrengthSession[], slots: Slot[], kind: LoadKind): LoadSlot[] {
+  const byDate = new Map<string, { run: (number | null)[]; strength: (number | null)[] }>();
+  const add = (day: string, which: "run" | "strength", load: number | null) => {
+    const e = byDate.get(day) ?? { run: [], strength: [] };
+    e[which].push(load);
+    byDate.set(day, e);
+  };
+  if (kind !== "strength") for (const r of runs) add(localDate(r.started_at), "run", r.training_load ?? null);
+  if (kind !== "run") for (const s of sessions) add(s.day, "strength", s.training_load);
+  return slots.map((slot) => {
+    const runLoads = slot.days.flatMap((d) => byDate.get(d)?.run ?? []);
+    const strengthLoads = slot.days.flatMap((d) => byDate.get(d)?.strength ?? []);
+    const all = [...runLoads, ...strengthLoads];
+    const scored = all.filter((v): v is number => v !== null);
+    const sum = (list: (number | null)[]) => list.reduce<number>((a, b) => a + (b ?? 0), 0);
+    return {
+      key: slot.key, label: slot.label, run: sum(runLoads), strength: sum(strengthLoads),
+      total: all.length > 0 && scored.length === 0 ? null : sum(all),
+      workouts: all.length, unscored: all.length - scored.length,
+    };
+  });
 }

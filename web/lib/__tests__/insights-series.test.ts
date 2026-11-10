@@ -168,3 +168,98 @@ describe("weekly volume", () => {
     expect(late[0]).toMatchObject({ weekStart: "2026-11-09", km: 10 }); // 00:30 on Monday in Paris
   });
 });
+
+import { intradayPoints, loadPerSlot, recoverySeries, stressSeries } from "../insights-series";
+import type { RecoverySnapshot, StrengthSession } from "../types";
+
+describe("stress", () => {
+  it("has the day's average and your own 28 day average, with gaps left as gaps", () => {
+    const rows = [...before("2026-11-03", 8, { stress_avg: 40 }), day("2026-11-05", { stress_avg: 56 })];
+    const pts = stressSeries(rows, buildSlots(range, "daily"), "daily");
+    expect(pts.find((p) => p.key === "2026-11-05")).toMatchObject({ stress: 56, baseline: 40, isolated: true });
+    expect(pts.find((p) => p.key === "2026-11-06")).toMatchObject({ stress: null });
+  });
+
+  it("weekly averages the days that have a value", () => {
+    const rows = [day("2026-11-03", { stress_avg: 30 }), day("2026-11-05", { stress_avg: 50 })];
+    expect(stressSeries(rows, buildSlots(range, "weekly"), "weekly")[0].stress).toBe(40);
+  });
+});
+
+describe("recovery", () => {
+  const rows = [day("2026-11-08", { recovery_last: 80, recovery_min: 60, recovery_max: 95 }), day("2026-11-09", { recovery_last: 96, recovery_min: 96, recovery_max: 96 })];
+
+  it("one point a day: the last value, with the day's lowest and highest as a band", () => {
+    const p = recoverySeries(rows, buildSlots(range, "daily"), "daily").find((x) => x.key === "2026-11-08")!;
+    expect(p).toMatchObject({ last: 80, min: 60, max: 95, band: [60, 95] });
+  });
+
+  it("a day with no snapshots has no point and no band, not zero", () => {
+    const p = recoverySeries(rows, buildSlots(range, "daily"), "daily").find((x) => x.key === "2026-11-05")!;
+    expect([p.last, p.min, p.max, p.band]).toEqual([null, null, null, null]);
+  });
+
+  it("two days in a row need no dots", () => {
+    const pts = recoverySeries(rows, buildSlots(range, "daily"), "daily");
+    expect(pts.find((x) => x.key === "2026-11-08")!.isolated).toBe(false);
+  });
+});
+
+describe("intraday recovery", () => {
+  const snap = (taken_at: string, pct: number): RecoverySnapshot => ({ taken_at, recovery_pct: pct, level: "Fresh", full_recovery_h: 10 });
+
+  it("keeps only that Paris day's snapshots, in time order, with the Paris clock time", () => {
+    const pts = intradayPoints([
+      snap("2026-11-10T09:00:00Z", 90), snap("2026-11-09T22:30:00Z", 70), snap("2026-11-09T23:30:00Z", 75),
+      snap("2026-11-10T06:00:00Z", 85), snap("2026-11-10T23:30:00Z", 99),
+    ], "2026-11-10");
+    // 22:30 UTC on the 9th is 23:30 Paris on the 9th, and 23:30 UTC on the 10th is already the 11th in Paris.
+    expect(pts.map((p) => [p.label, p.pct])).toEqual([["00:30", 75], ["07:00", 85], ["10:00", 90]]);
+  });
+
+  it("no snapshots that day means no points", () => {
+    expect(intradayPoints([snap("2026-11-09T12:00:00Z", 50)], "2026-11-10")).toEqual([]);
+  });
+});
+
+describe("training load per day", () => {
+  const run = (date: string, load: number | null): RunRow => ({ coros_id: date + load, started_at: `${date}T07:00:00Z`, distance_km: 8, duration_s: 3000, avg_hr: null, training_load: load });
+  const session = (dayStr: string, load: number | null): StrengthSession => ({
+    id: dayStr + load, source: "coros", coros_id: dayStr + load, started_at: `${dayStr}T17:00:00Z`, day: dayStr, workout_name: null, duration_s: 3000, total_time_s: null, sets_count: null,
+    avg_hr: null, calories: null, training_load: load, aerobic_te: null, anaerobic_te: null, training_focus: null, perceived_effort: null, workout_note: null, sets: [],
+  });
+  const slots = buildSlots({ from: "2026-11-02", to: "2026-11-04" }, "daily");
+
+  it("adds a day's runs and gym sessions, keeping each kind separate", () => {
+    const l = loadPerSlot([run("2026-11-02", 100), run("2026-11-02", 20)], [session("2026-11-02", 30)], slots, "all");
+    expect(l[0]).toMatchObject({ run: 120, strength: 30, total: 150, workouts: 3, unscored: 0 });
+  });
+
+  it("a day with no workout is a real zero", () => {
+    expect(loadPerSlot([], [], slots, "all")[1]).toMatchObject({ run: 0, strength: 0, total: 0, workouts: 0 });
+  });
+
+  it("workouts COROS gave no load for are missing, not zero", () => {
+    const l = loadPerSlot([run("2026-11-02", null)], [], slots, "all");
+    expect(l[0]).toMatchObject({ total: null, workouts: 1, unscored: 1 });
+  });
+
+  it("a day with one scored and one unscored workout adds up the scored one and says one is missing", () => {
+    const l = loadPerSlot([run("2026-11-02", 80), run("2026-11-02", null)], [], slots, "all");
+    expect(l[0]).toMatchObject({ total: 80, unscored: 1, workouts: 2 });
+  });
+
+  it("the filter leaves out the other kind completely, including its unscored workouts", () => {
+    const runs = [run("2026-11-02", 100)];
+    const sessions = [session("2026-11-02", 30), session("2026-11-02", null)];
+    expect(loadPerSlot(runs, sessions, slots, "run")[0]).toMatchObject({ run: 100, strength: 0, total: 100, workouts: 1, unscored: 0 });
+    expect(loadPerSlot(runs, sessions, slots, "strength")[0]).toMatchObject({ run: 0, strength: 30, total: 30, workouts: 2, unscored: 1 });
+  });
+
+  it("weekly adds up the whole week, and uses the Paris day for a late run", () => {
+    const week = buildSlots({ from: "2026-11-02", to: "2026-11-08" }, "weekly");
+    const late = { ...run("2026-11-08", 50), started_at: "2026-11-08T23:30:00Z" }; // 00:30 on Monday 9 Nov in Paris
+    const l = loadPerSlot([run("2026-11-03", 100), late], [session("2026-11-05", 30)], week, "all");
+    expect(l[0]).toMatchObject({ run: 100, strength: 30, total: 130 });
+  });
+});

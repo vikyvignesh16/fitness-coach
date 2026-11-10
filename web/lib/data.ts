@@ -63,7 +63,7 @@ export async function loadRuns(): Promise<RunRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("runs")
-    .select("coros_id, started_at, distance_km, duration_s, avg_hr")
+    .select("coros_id, started_at, distance_km, duration_s, avg_hr, training_load")
     .order("started_at", { ascending: false });
   if (error) throw new Error(`Could not read runs: ${error.message}`);
   return data as RunRow[];
