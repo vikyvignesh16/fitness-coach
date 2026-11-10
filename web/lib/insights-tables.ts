@@ -1,6 +1,7 @@
 import type { DataTable } from "@/components/insights/chart-card";
 import { formatMinutes } from "./insights-kpis";
 import { formatHms, formatPace, type EfficiencyPoint, type FitnessPoint, type LongRunPoint } from "./insights-fitness";
+import type { LoadSlot, RecoveryPoint, StressPoint } from "./insights-series";
 import type { HrvPoint, LoadPoint, RhrPoint, ScorePoint, SleepPoint, VolumePoint } from "./insights-series";
 import type { View } from "./insights-range";
 
@@ -51,4 +52,19 @@ export const fitnessTable = (p: FitnessPoint[], view: View): DataTable => ({
 export const efficiencyTable = (p: EfficiencyPoint[]): DataTable => ({
   columns: ["Date", "Distance (km)", "Avg heart rate", "Pace (min/km)"],
   rows: p.map((x) => [x.label, x.km, x.hr, formatPace(x.paceS)]),
+});
+
+export const stressTable = (p: StressPoint[], view: View): DataTable => ({
+  columns: [first(view), "Average stress", "Your 28 day average"],
+  rows: p.map((x) => [x.label, x.stress, x.baseline]),
+});
+
+export const recoveryTable = (p: RecoveryPoint[], view: View): DataTable => ({
+  columns: [first(view), "Last reading (%)", "Lowest (%)", "Highest (%)"],
+  rows: p.map((x) => [x.label, x.last, x.min, x.max]),
+});
+
+export const loadPerSlotTable = (p: LoadSlot[], view: View): DataTable => ({
+  columns: [first(view), "Running", "Strength", "Total load", "Workouts with no load figure"],
+  rows: p.map((x) => [x.label, x.total === null ? null : x.run, x.total === null ? null : x.strength, x.total, x.unscored]),
 });

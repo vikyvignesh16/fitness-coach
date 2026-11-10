@@ -66,6 +66,7 @@ export type RunRow = {
   distance_km: number;
   duration_s: number;
   avg_hr: number | null;
+  training_load?: number | null; // from COROS, once the run details were read
 };
 
 export type DayActual = {

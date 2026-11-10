@@ -38,3 +38,6 @@ export function TipBox({ title, rows, note }: { title: string; rows: { color?: s
 export const AXIS_TICK = { fill: "var(--muted-foreground)", fontSize: 11 };
 export const GRID = { vertical: false, stroke: "var(--border)" } as const;
 export const AXIS_LINE = { stroke: "var(--border)" };
+
+/** The 2px gap between touching columns eats a narrow column whole, so with many columns there is no gap. */
+export const gapFor = (columns: number) => (columns > 31 ? 0 : 2);

@@ -63,7 +63,7 @@ export async function loadRuns(): Promise<RunRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("runs")
-    .select("coros_id, started_at, distance_km, duration_s, avg_hr")
+    .select("coros_id, started_at, distance_km, duration_s, avg_hr, training_load")
     .order("started_at", { ascending: false });
   if (error) throw new Error(`Could not read runs: ${error.message}`);
   return data as RunRow[];
@@ -342,23 +342,27 @@ export type InsightsData = {
   kpiRows: HealthDay[]; // the last 60 days, for the cards at the top
   rows: HealthDay[]; // the chosen range plus 28 days before it, for baselines
   snapshot: RecoverySnapshot | null; // the newest recovery status
+  todaySnapshots: RecoverySnapshot[]; // every recovery reading taken today (Paris), for the "today so far" line
 };
 
 /** Watch health numbers for the Insights page. Read with the signed in user's session, so RLS applies. */
 export async function loadInsights(range: InsightsRange, today: string): Promise<InsightsData> {
   const supabase = await createClient();
-  const [kpi, inRange, snap] = await Promise.all([
+  const [kpi, inRange, snap, todaySnaps] = await Promise.all([
     supabase.from("health_daily").select(HEALTH_COLUMNS).gte("day", addDays(today, -KPI_LOOKBACK_DAYS)).order("day"),
     supabase.from("health_daily").select(HEALTH_COLUMNS).gte("day", addDays(range.from, -BASELINE_DAYS)).lte("day", range.to).order("day"),
     supabase.from("recovery_snapshots").select("taken_at, recovery_pct, level, full_recovery_h").order("taken_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("recovery_snapshots").select("taken_at, recovery_pct, level, full_recovery_h").eq("day", today).order("taken_at"),
   ]);
   if (kpi.error) throw new Error(`Could not read health data: ${kpi.error.message}`);
   if (inRange.error) throw new Error(`Could not read health data: ${inRange.error.message}`);
   if (snap.error) throw new Error(`Could not read recovery status: ${snap.error.message}`);
+  if (todaySnaps.error) throw new Error(`Could not read recovery status: ${todaySnaps.error.message}`);
   return {
     kpiRows: kpi.data as unknown as HealthDay[],
     rows: inRange.data as unknown as HealthDay[],
     snapshot: snap.data as RecoverySnapshot | null,
+    todaySnapshots: todaySnaps.data as RecoverySnapshot[],
   };
 }
 
