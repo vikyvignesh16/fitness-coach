@@ -12,6 +12,7 @@ All services deploy from the private GitHub repository, branch `main`.
   * `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 * Never put `SUPABASE_SERVICE_ROLE_KEY` here.
 * Networking: generate a public domain (https). The iPhone install needs https.
+* The live address: https://fitness-coach-production-e7b2.up.railway.app (public, nothing secret in it; every page except the login needs you to sign in).
 
 ## Service: runs (cron, pulls runs from COROS)
 * Root directory: `/` (repo root)
