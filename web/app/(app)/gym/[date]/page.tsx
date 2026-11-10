@@ -1,34 +1,26 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExerciseCard } from "@/components/exercise-card";
-import { FinishWorkoutButton } from "@/components/finish-workout-button";
 import { StatusBanner } from "@/components/status-banner";
-import { loadGymSession } from "@/lib/data";
-import { buildSetRows, exerciseDone, lastPerformance, sessionProgress, sessionTotals } from "@/lib/gym";
+import { StrengthSessionCard } from "@/components/strength-session-card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { loadGymDay } from "@/lib/data";
 import { dayMonth, weekdayShort } from "@/lib/weeks";
 
-export default async function GymSessionPage(props: PageProps<"/gym/[date]">) {
+export default async function GymDayPage(props: PageProps<"/gym/[date]">) {
   const { date } = await props.params;
-  const data = await loadGymSession(date);
+  const data = await loadGymDay(date);
   if (!data) notFound();
-
-  const { day, locked, logged, history, finished } = data;
-  const exercises = day.gym!.key_exercises;
-  const progress = sessionProgress(exercises, logged);
-  const totals = sessionTotals(logged);
-  const firstOpen = exercises.findIndex((e) => !exerciseDone(e, logged));
+  const { day, locked, sessions } = data;
 
   return (
     <>
-      <Link href={`/gym?week=${day.week}`} className="text-muted-foreground flex min-h-11 items-center gap-2 text-sm">
+      <Link href={day ? `/gym?week=${day.week}` : "/gym"} className="text-muted-foreground flex min-h-11 items-center gap-2 text-sm">
         <ArrowLeft aria-hidden className="size-4" /> Gym
       </Link>
       <div>
-        <h1 className="text-xl font-semibold">{day.gym!.session}</h1>
-        <p className="text-muted-foreground text-sm">
-          {weekdayShort(date)} {dayMonth(date)} · {progress.done} of {progress.total} exercises done
-        </p>
+        <h1 className="text-xl font-semibold">{day?.gym?.session ?? sessions[0]?.workout_name ?? "Strength session"}</h1>
+        <p className="text-muted-foreground text-sm">{weekdayShort(date)} {dayMonth(date)}</p>
       </div>
 
       {locked && (
@@ -36,27 +28,31 @@ export default async function GymSessionPage(props: PageProps<"/gym/[date]">) {
           Do the four ankle checks first. <Link href="/gates/ankle" className="text-foreground underline">Open the ankle check</Link>
         </StatusBanner>
       )}
-      {finished && (
-        <StatusBanner level="good" title="Workout finished">
-          {totals.setsDone} sets done, {totals.volumeKg.toLocaleString("en-GB")} kg lifted in total.
-        </StatusBanner>
+
+      {sessions.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Your watch has not recorded a strength session for this day.</p>
+      ) : (
+        sessions.map((s) => <StrengthSessionCard key={s.id} session={s} />)
       )}
 
-      <div className="space-y-3">
-        {exercises.map((exercise, i) => (
-          <ExerciseCard
-            key={exercise.name}
-            date={date}
-            exercise={exercise}
-            initialRows={buildSetRows(exercise, logged)}
-            last={lastPerformance(history, exercise.name, date)}
-            disabled={locked}
-            defaultOpen={i === firstOpen}
-          />
-        ))}
-      </div>
-
-      <FinishWorkoutButton date={date} disabled={locked} />
+      {day?.gym && (
+        <Card>
+          <CardHeader>
+            <CardTitle>What the plan said</CardTitle>
+            <CardDescription>{day.gym.session}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 text-sm">
+              {day.gym.key_exercises.map((e) => (
+                <li key={e.name} className="flex justify-between gap-3">
+                  <span>{e.name}</span>
+                  <span className="text-muted-foreground">{[e.sets ? `${e.sets} sets` : null, e.reps].filter(Boolean).join(" of ")}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

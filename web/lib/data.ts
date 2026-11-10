@@ -7,7 +7,7 @@ import { isRestDay } from "@/lib/labels";
 import { runState, upcomingRuns, waitingCount, type ApprovalRow, type RunState, type UpcomingRun } from "@/lib/watch-approve";
 import { addDays, checkinDue, currentWeekNumber, gatePassed, mondayOf, todayLocal } from "@/lib/weeks";
 import { diffPlans, notesAdded, watchImpact, type DayChange, type DraftPlan } from "@/lib/proposal-diff";
-import type { HealthDay, RunExtra, PlanDay, PlanWeek, RecoverySnapshot, RunRow } from "@/lib/types";
+import type { HealthDay, RunExtra, StrengthSession, PlanDay, PlanWeek, RecoverySnapshot, RunRow } from "@/lib/types";
 import { BASELINE_DAYS } from "@/lib/insights-kpis";
 import type { InsightsRange } from "@/lib/insights-range";
 
@@ -528,4 +528,60 @@ export async function loadRunExtra(corosId: string): Promise<RunExtra | null> {
   } catch {
     return null;
   }
+}
+
+
+const STRENGTH_COLUMNS = "id, coros_id, started_at, day, workout_name, duration_s, total_time_s, sets_count, avg_hr, calories, training_load, aerobic_te, anaerobic_te, training_focus, perceived_effort, workout_note, strength_sets(position, exercise, reps, weight_kg, seconds, avg_hr, max_hr)";
+
+/**
+ * Strength sessions from the watch between two Paris dates, with their sets. Never throws: if the tables are not
+ * there yet or the read fails, the Gym pages still open and show no watch sessions.
+ */
+export async function loadStrength(from: string, to: string): Promise<StrengthSession[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("strength_sessions")
+      .select(STRENGTH_COLUMNS)
+      .gte("day", from)
+      .lte("day", to)
+      .order("started_at");
+    if (error || !data) return [];
+    return (data as unknown as (Omit<StrengthSession, "sets"> & { strength_sets: StrengthSession["sets"] })[]).map(({ strength_sets, ...s }) => ({
+      ...s,
+      sets: [...strength_sets].sort((a, b) => a.position - b.position),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export type GymDayData = {
+  day: PlanDay | null; // the plan's gym session for this date, if there is one
+  locked: boolean;
+  sessions: StrengthSession[];
+};
+
+/** One date on the Gym tab: what the plan said and what the watch recorded. Null if neither exists. */
+export async function loadGymDay(date: string): Promise<GymDayData | null> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const supabase = await createClient();
+  const { data: version } = await supabase
+    .from("plan_versions").select("id").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const [dayRes, gates, sessions] = await Promise.all([
+    version
+      ? supabase.from("plan_days").select("date, week, run, gym").eq("plan_version_id", version.id).eq("date", date).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from("approvals").select("passed, created_at").eq("kind", "gate").eq("gate_id", ANKLE_GATE_ID),
+    loadStrength(date, date),
+  ]);
+  if (dayRes.error) throw new Error("Could not read the plan day.");
+  const plan = dayRes.data as PlanDay | null;
+  const hasPlannedGym = Boolean(plan?.gym?.key_exercises?.length);
+  if (!hasPlannedGym && sessions.length === 0) return null;
+  return {
+    day: hasPlannedGym ? plan : null,
+    locked: plan ? lockedWeeks(gatePassed(gates.data ?? [])).includes(plan.week) : false,
+    sessions,
+  };
 }

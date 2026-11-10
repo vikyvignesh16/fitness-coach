@@ -3,8 +3,9 @@ import Link from "next/link";
 import { StatusBanner } from "@/components/status-banner";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { loadGymWeek } from "@/lib/data";
-import { dayMonth, weekdayShort } from "@/lib/weeks";
+import { loadGymWeek, loadStrength } from "@/lib/data";
+import { formatSessionTime, gymWeekRows, sessionTotals } from "@/lib/strength";
+import { addDays, dayMonth, todayLocal, weekdayShort } from "@/lib/weeks";
 
 function weekNumber(value: string | string[] | undefined): number | null {
   const n = Number(Array.isArray(value) ? value[0] : value);
@@ -14,6 +15,9 @@ function weekNumber(value: string | string[] | undefined): number | null {
 export default async function GymPage(props: PageProps<"/gym">) {
   const requested = weekNumber((await props.searchParams).week);
   const { weeks, week, locked, sessions } = await loadGymWeek(requested);
+  const strength = await loadStrength(week.start_date, addDays(week.start_date, 6));
+  const rows = gymWeekRows(week.start_date, sessions.map((s) => s.day), strength);
+  const today = todayLocal();
   const index = weeks.findIndex((w) => w.week === week.week);
   const prev = weeks[index - 1];
   const next = weeks[index + 1];
@@ -43,31 +47,41 @@ export default async function GymPage(props: PageProps<"/gym">) {
         </StatusBanner>
       )}
 
-      <ul className="space-y-2">
-        {sessions.map(({ day, progress, started, finished }) => (
-          <li key={day.date}>
-            <Link href={`/gym/${day.date}`} className="block">
-              <Card className="hover:bg-muted/40">
-                <CardContent className="flex items-center gap-3">
-                  <div className="w-14 shrink-0">
-                    <p className="font-medium">{weekdayShort(day.date)}</p>
-                    <p className="text-muted-foreground text-xs">{dayMonth(day.date)}</p>
-                  </div>
-                  <p className="min-w-0 flex-1 font-medium">{day.gym!.session}</p>
-                  {finished ? (
-                    <Badge>Finished</Badge>
-                  ) : started ? (
-                    <span className="text-muted-foreground text-sm tabular-nums">{progress.done} of {progress.total} done</span>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">{locked ? "Locked" : "Not started"}</span>
-                  )}
-                  <ChevronRight aria-hidden className="text-muted-foreground size-5 shrink-0" />
-                </CardContent>
-              </Card>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {rows.length === 0 ? (
+        <p className="text-muted-foreground text-sm">No gym sessions planned or recorded this week.</p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((row) => (
+            <li key={row.date}>
+              <Link href={`/gym/${row.date}`} className="block">
+                <Card className="hover:bg-muted/40">
+                  <CardContent className="flex items-center gap-3">
+                    <div className="w-14 shrink-0">
+                      <p className="font-medium">{weekdayShort(row.date)}</p>
+                      <p className="text-muted-foreground text-xs">{dayMonth(row.date)}</p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{row.planned ?? row.sessions[0]?.workout_name ?? "Strength session"}</p>
+                      {row.planned === null && <p className="text-muted-foreground text-xs">Not in the plan</p>}
+                    </div>
+                    {row.sessions.length > 0 ? (
+                      <div className="text-right text-sm">
+                        <Badge>Done</Badge>
+                        <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+                          {row.sessions.map((s) => [s.duration_s === null ? null : formatSessionTime(s.duration_s), s.sets.length ? `${sessionTotals(s.sets).sets} sets` : null].filter(Boolean).join(" · ")).join(" + ")}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">{locked ? "Locked" : row.date < today ? "Not recorded" : "Planned"}</span>
+                    )}
+                    <ChevronRight aria-hidden className="text-muted-foreground size-5 shrink-0" />
+                  </CardContent>
+                </Card>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </>
   );
 }
