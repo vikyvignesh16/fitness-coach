@@ -371,3 +371,12 @@ Known limit: the check happens before a call, so the call that crosses the cap c
 Not yet checked: that the thought filter works on a fresh call (needs one more paid call of a fraction of a cent).
 Revisit when: a model or price changes, or we use Sol, which is 20 times dearer.
 Status: open
+
+## 2026-11-10 Agent lesson 2: a fixed form for the model's answer
+Chose: a Pydantic class (coach/forms.py, RunnerNote: headline up to 120 characters, readiness green, amber or red, one to five observations, confidence 0 to 1) given to ADK as output_schema, and the same class checks the reply in our own code (check_note). Extra fields are an error. A bad reply is rejected with plain messages and never fixed silently. This is a practice form. The real daily review form comes in lesson 10.
+Ran two real calls with invented numbers (about $0.00014 to $0.00016 each): a normal question and one that told the model to ignore the form and write a poem. Both replies came back as clean JSON and passed. The thought filter from lesson 1 works (the raw reply is only the JSON).
+What this does not prove: one tempting question passing is not proof that the form always holds. The shape is enforced, not the truth. The model said confidence 0.95, a number it made up, so confidence is not a measure of anything until we test it against known answers (lessons 8 and 10).
+Known ADK limit, to design around: setting output_schema stops an agent from using tools. So the daily review (no tools) fits the form approach. The coach chat (tools) cannot use it on the same agent, so its answers are checked in code afterwards.
+Alternatives: asking for JSON in the prompt only (rejected: no guarantee, more broken replies); parsing free text with rules (rejected: breaks as soon as the wording changes).
+Revisit when: the daily review form is designed in lesson 10.
+Status: open

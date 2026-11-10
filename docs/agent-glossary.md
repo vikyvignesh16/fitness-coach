@@ -15,3 +15,8 @@ Words from the agent lessons, in plain language. It grows with each lesson.
 * **Thought part**: the model's private reasoning summary, marked in the reply. Not shown to the user.
 * **Receipt** (llm_calls row): one line per model call with tokens and cost. Never the question or answer.
 * **Cap**: the most we spend in a month on model calls. A plain tested function, checked before each call.
+* **Structured output** (output schema): a fixed form the model must fill in, written as a Pydantic class. ADK passes the shape to the model, and we check the reply against the same class.
+* **Pydantic**: a Python library where a class lists fields and their rules (type, length, allowed words). It validates data and gives plain error messages.
+* **Validation**: checking that a reply fits the form. It checks the shape, not whether the content is true.
+* **Silent failure**: the program runs and the answer looks fine but is wrong, such as lost history or a confident wrong claim. Worse than a loud crash, because nobody notices.
+* **Coroutine**: what an async function gives back when you call it without await. A recipe card that nobody cooked.
