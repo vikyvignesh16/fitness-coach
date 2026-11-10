@@ -51,3 +51,13 @@ where has_table_privilege('authenticated', x.t, p);
 select 'anon can write ' || t as problem
 from (values ('strength_sessions'), ('strength_sets')) as x(t), unnest(array['insert', 'update', 'delete']) as p
 where has_table_privilege('anon', x.t, p);
+
+-- 8. Model call log and cap (migration 0017). All of these must return zero rows.
+set local role anon;
+select 'llm_calls' as t, count(*) from llm_calls having count(*) > 0
+union all select 'coach_settings', count(*) from coach_settings having count(*) > 0;
+reset role;
+select 'authenticated can write llm_calls' as problem
+from unnest(array['insert', 'update', 'delete']) as p where has_table_privilege('authenticated', 'llm_calls', p);
+select 'authenticated can ' || p || ' coach_settings' as problem
+from unnest(array['insert', 'delete']) as p where has_table_privilege('authenticated', 'coach_settings', p);
