@@ -92,3 +92,11 @@ def test_the_note_label_only_counts_at_the_start_of_a_line():
     text = FULL.replace("Performance: Below Average", "Performance: see Workout Note: below")
     assert parse_activity_detail(text)["workout_note"].startswith("Long run day.")
     assert parse_activity_detail(text)["performance"] == "see Workout Note: below"
+
+
+def test_minus_one_means_coros_had_nothing():
+    text = (FULL.replace("Performance: Below Average", "Performance: -1")
+            .replace("Training Load: 242", "Training Load: -1").replace("Aerobic TE: 4.0", "Aerobic TE: -1.0"))
+    row = parse_activity_detail(text)
+    assert row["performance"] is None and row["training_load"] is None and row["aerobic_te"] is None
+    assert row["anaerobic_te"] == 0.1  # a real value next to them is kept

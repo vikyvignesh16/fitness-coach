@@ -7,7 +7,7 @@ Format checked on 2026-11-09 with one outdoor run (coros-mcp skill).
 import json
 import re
 
-MISSING = {"", "--", "-", "N/A", "n/a"}
+MISSING = {"", "--", "-", "-1", "N/A", "n/a"}  # COROS writes -1 when it has nothing, as it does for a missing sleep score
 
 
 def _unwrap(text: str) -> str:
@@ -36,7 +36,8 @@ def _number(text: str, label: str, unit: str | None = None, cast=float):
     m = re.fullmatch(rf"(-?[\d,.]+)\s*{re.escape(unit)}?" if unit else r"(-?[\d,.]+)", value)
     if not m:
         raise ValueError(f"Unexpected COROS value for {label}: {value!r}")
-    return cast(m.group(1).replace(",", ""))
+    number = cast(m.group(1).replace(",", ""))
+    return None if number < 0 else number  # a negative number means COROS had nothing
 
 
 def parse_activity_detail(text: str) -> dict:
