@@ -73,3 +73,13 @@ from (values ('chat_threads'), ('chat_messages'), ('coach_memory')) as x(t), unn
 where has_table_privilege('authenticated', x.t, p);
 select 'anon can touch ' || t as problem
 from (values ('chat_threads'), ('chat_messages'), ('coach_memory')) as x(t) where has_table_privilege('anon', x.t, 'select');
+
+-- 10. Library chunks (migration 0019). All of these must return zero rows.
+set local role anon;
+select 'library_chunks' as t, count(*) from library_chunks having count(*) > 0;
+reset role;
+select 'authenticated can ' || p as problem
+from unnest(array['insert', 'update']) as p where has_table_privilege('authenticated', 'library_chunks', p);
+select 'anon can touch library_chunks' as problem where has_table_privilege('anon', 'library_chunks', 'select');
+select 'anon can run match_library_chunks' as problem
+where has_function_privilege('anon', 'match_library_chunks(extensions.vector, int, text)', 'execute');
