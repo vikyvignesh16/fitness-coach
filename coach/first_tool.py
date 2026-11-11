@@ -19,7 +19,7 @@ from google.genai import types
 from coach.first_call import APP, MODEL
 from coach.guard import ModelGuard
 from coach.llm_log import cap_for, month_spend
-from coach.registry import Readers, build_tools, supabase_readers
+from coach.registry import Readers, Writers, build_tools, supabase_readers
 from ingest.import_plan import find_owner
 
 INSTRUCTIONS = (
@@ -90,7 +90,7 @@ def main() -> None:
     readers = supabase_readers(sb, owner) if args.real_data else invented_readers()
     guard = ModelGuard(sb, owner, purpose="first_tool", model=MODEL)
     agent = LlmAgent(name="coach", model=LiteLlm(model=f"openrouter/{MODEL}"), instruction=INSTRUCTIONS,
-                     tools=[spec.fn for spec in build_tools(readers)],
+                     tools=[spec.fn for spec in build_tools(readers, Writers(save_fact=lambda fact: print(f'  (demo: would save {fact!r})')))],
                      before_model_callback=guard.before_model, after_model_callback=guard.after_model)
     print(f"Question: {args.question}")
     asyncio.run(run(agent, args.question))

@@ -17,6 +17,7 @@ class ModelGuard:
         self.cap_override = cap_override  # for a demo only, never saved
         self.blocked = False
         self.last_cost = Decimal("0")
+        self.input_tokens = []  # input size of each call, so a demo can show history growing
 
     def before_model(self, callback_context, llm_request):
         """Runs before each model call. Returning a response here means the model is not called at all."""
@@ -36,6 +37,7 @@ class ModelGuard:
             return None
         tokens_in, tokens_out = usage.prompt_token_count or 0, usage.candidates_token_count or 0
         self.last_cost = cost_usd(self.model, tokens_in, tokens_out)
+        self.input_tokens.append(tokens_in)
         record_call(self.sb, self.user_id, purpose=self.purpose, model=self.model, input_tokens=tokens_in,
                     output_tokens=tokens_out, cost=self.last_cost, ok=not llm_response.error_code,
                     error=str(llm_response.error_code) if llm_response.error_code else None)

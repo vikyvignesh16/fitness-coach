@@ -29,3 +29,10 @@ Words from the agent lessons, in plain language. It grows with each lesson.
 * **Tool registry**: one list of every tool the agent may use, with the tables each one reads. To govern the agent you review this list. A shared test checks every tool in it against the design rules.
 * **Flag**: a fact about one number that code worked out, like "slept under 6 hours". Facts only, never advice.
 * **Drift guard**: a test that fails if two copies of the same rule (here the Python and TypeScript flag limits) stop matching.
+* **Short term memory**: the back and forth of one conversation, stored in chat_messages (grouped by chat_threads). Only the newest 20 messages go back to the model each turn, so cost stays steady.
+* **Long term memory**: short facts Vicky asked the coach to remember, stored in coach_memory (max 50 facts, 200 characters each). All of them go into every prompt, inside a fence that labels them as data.
+* **Seeding a session**: filling a fresh ADK session with our saved messages at the start of each turn. The model remembers nothing between calls, so we rebuild what it knows every time.
+* **Instruction provider**: an instruction written as a function. ADK treats a plain text instruction as a template and fills {placeholders} from session state. A function skips that, which keeps {braces} inside remembered facts harmless.
+* **Gate** (before_tool_callback): our code that runs before a tool and can refuse it. The save_memory gate refuses the tool unless the user's message asks to remember something.
+* **Scripted model**: a fake model that plays back prepared replies and records what it was sent. It lets a whole chat turn be tested for free.
+* **Approved writes list**: the short list in the rules test of which tools may change data and which tables. Adding a write power means a human edits it.
