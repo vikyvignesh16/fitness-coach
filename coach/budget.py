@@ -17,6 +17,7 @@ WARN_AT = Decimal("0.8")  # show a warning from 80 percent of the cap
 PRICES: dict[str, tuple[Decimal, Decimal]] = {
     "openai/gpt-6-luna": (Decimal("0.10"), Decimal("0.50")),
     "openai/gpt-6-sol": (Decimal("2"), Decimal("10")),
+    "openai/text-embedding-3-small": (Decimal("0.02"), Decimal("0")),  # embeddings have no output tokens
 }
 
 
