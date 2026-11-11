@@ -24,7 +24,8 @@ LIBRARY_RULE = (
     "Use search_library for questions about how the app or its data is organised, or about anything written in the library. "
     "Say only what the results say. After each statement that comes from a result, cite it as [ref], like [lib:1a2b3c4d]. "
     "Cite only references a search returned. If found is false, say the library does not cover it. Do not guess. "
-    "Results of kind sample are practice material, not evidence. Never present them as a health or exercise fact."
+    "Results of kind sample are practice material. You may use them to explain how the app or its data is organised. "
+    "Never present a sample result as a health or exercise fact, because it is not evidence."
 )
 
 

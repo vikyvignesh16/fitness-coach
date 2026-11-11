@@ -38,4 +38,6 @@ def test_the_cap_and_web_failures_become_plain_errors_not_crashes():
 def test_the_instruction_tells_the_coach_to_cite_and_not_to_treat_samples_as_evidence():
     assert "cite it as [ref]" in LIBRARY_RULE and "Cite only references a search returned" in LIBRARY_RULE
     assert "not evidence" in LIBRARY_RULE and "does not cover it" in LIBRARY_RULE
+    assert "may use them to explain how the app or its data is organised" in LIBRARY_RULE  # samples are not useless
+    assert "Never present a sample result as a health or exercise fact" in LIBRARY_RULE
     assert LIBRARY_RULE in build_instructions([])
