@@ -36,3 +36,12 @@ Words from the agent lessons, in plain language. It grows with each lesson.
 * **Gate** (before_tool_callback): our code that runs before a tool and can refuse it. The save_memory gate refuses the tool unless the user's message asks to remember something.
 * **Scripted model**: a fake model that plays back prepared replies and records what it was sent. It lets a whole chat turn be tested for free.
 * **Approved writes list**: the short list in the rules test of which tools may change data and which tables. Adding a write power means a human edits it.
+* **RAG** (retrieval augmented generation): before the model answers, our code finds the most useful pieces of a library and puts them in front of it. The model reads the right pages each time instead of memorising the library.
+* **Chunk**: a short piece of a document (at most 800 characters here) that keeps the heading it sat under. Small enough to match one idea.
+* **Embedding**: a list of 1536 numbers that captures what a text means. Texts about the same thing get close numbers. Made by openai/text-embedding-3-small through OpenRouter, about $0.02 per million tokens.
+* **Vector search**: finding the stored chunks whose numbers are closest to the question's numbers. Done by Postgres with pgvector, in the function match_library_chunks.
+* **Grant versus policy**: a policy (Row Level Security) decides which rows a role sees. A grant decides whether a role may touch the table or function at all. Postgres lets everyone run a new function through the shared public grant, so revoke from public, not only from anon. Test the lock, not just the line that should close it.
+* **Reference (ref)**: the short label for a library chunk, like lib:1a2b3c4d (the start of its id). The model cites it in square brackets. The id is never invented by the model, it comes from the search result.
+* **Citation check**: a code check that every reference in an answer was really returned by a search in the same turn. It catches made up references. It does not catch a claim that has no citation at all. That needs its own check (lesson 7).
+* **Retrieval test**: asking the search alone, with no chat model, a list of questions where we know the right chunk. It shows distances, so the limit can be set from facts. Cheaper and clearer than testing through the chat.
+* **Over-refusal**: the model refusing to use something it was allowed to use. Our first library rule said samples were "not evidence" and the coach would not even explain the schema. Rules need to say what is allowed, not only what is forbidden.

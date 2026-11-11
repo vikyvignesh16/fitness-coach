@@ -20,7 +20,15 @@ REMEMBER_RULE = (
     "Never save a fact on your own, and never save watch numbers or health measurements."
 )
 
+LIBRARY_RULE = (
+    "Use search_library for questions about how the app or its data is organised, or about anything written in the library. "
+    "Say only what the results say. After each statement that comes from a result, cite it as [ref], like [lib:1a2b3c4d]. "
+    "Cite only references a search returned. If found is false, say the library does not cover it. Do not guess. "
+    "Results of kind sample are practice material. You may use them to explain how the app or its data is organised. "
+    "Never present a sample result as a health or exercise fact, because it is not evidence."
+)
+
 
 def build_instructions(facts: list[dict]) -> str:
     """The system instruction for one turn: the base text, the memory rule, and the remembered facts inside their fence."""
-    return "\n\n".join([BASE, REMEMBER_RULE, render_facts_block(facts)])
+    return "\n\n".join([BASE, REMEMBER_RULE, LIBRARY_RULE, render_facts_block(facts)])

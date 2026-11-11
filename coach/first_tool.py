@@ -45,7 +45,7 @@ def invented_readers() -> Readers:
     plan = {"date": "2026-11-08", "run": {"type": "long_run", "distance_km": 16, "duration_min": 100, "pace_or_effort": "easy, RPE 3 to 4"},
             "gym": {"session": "", "key_exercises": []}}
     runs = [{"started_at": "2026-11-08T08:00:00+00:00", "distance_km": 19.2, "duration_s": 6600, "avg_hr": 158, "training_load": 240, "perceived_effort": "Hard"}]
-    return Readers(health=invented_fetch, runs=lambda a, b: runs, plan_day=lambda d: plan if d == "2026-11-08" else None)
+    return Readers(health=invented_fetch, runs=lambda a, b: runs, plan_day=lambda d: plan if d == "2026-11-08" else None, library=lambda q: [])
 
 
 def describe(event) -> list[str]:

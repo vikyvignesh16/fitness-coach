@@ -9,7 +9,7 @@ from coach.tests.fake_llm import ScriptedLlm, call, say
 from coach.tests.fakes import FakeStore, FakeSupabase
 
 ME = "me"
-READERS = Readers(health=lambda a, b: [], runs=lambda a, b: [], plan_day=lambda d: None)
+READERS = Readers(health=lambda a, b: [], runs=lambda a, b: [], plan_day=lambda d: None, library=lambda q: [])
 
 
 def setup(script, spent="0", facts=()):

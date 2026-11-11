@@ -87,3 +87,73 @@ class _StoreQuery:
         found = [r for r in rows if all(r.get(c) == v for c, v in self._filters)]
         found.sort(key=lambda r: r["created_at"], reverse=self._desc)
         return Result(found[: self._limit] if self._limit else found)
+
+
+class FakeLibrary(FakeSupabase):
+    """FakeSupabase plus an in memory library_chunks table and a match_library_chunks function that uses real cosine distance."""
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.chunks: list[dict] = []
+        self.rpc_calls: list[dict] = []
+
+    def table(self, name):
+        return _LibraryQuery(self) if name == "library_chunks" else super().table(name)
+
+    def rpc(self, name, params):
+        assert name == "match_library_chunks"
+        self.rpc_calls.append(params)
+        return _Rpc(self, params)
+
+
+class _LibraryQuery:
+    def __init__(self, db):
+        self.db, self._filters, self._upsert, self._delete = db, [], None, False
+
+    def select(self, *_): return self
+    def delete(self):
+        self._delete = True
+        return self
+    def eq(self, column, value):
+        self._filters.append((column, "eq", value))
+        return self
+    def gte(self, column, value):
+        self._filters.append((column, "gte", value))
+        return self
+    def upsert(self, rows, on_conflict):
+        self._upsert = (rows, on_conflict.split(","))
+        return self
+
+    def _matches(self, row):
+        return all(row[c] == v if op == "eq" else row[c] >= v for c, op, v in self._filters)
+
+    def execute(self):
+        if self._upsert:
+            rows, keys = self._upsert
+            for new in rows:
+                for old in self.db.chunks:
+                    if all(old[k] == new[k] for k in keys):
+                        old.update(new)
+                        break
+                else:
+                    self.db.chunks.append(dict(new, id=f"chunk-{len(self.db.chunks) + 1}"))
+            return Result(rows)
+        found = [r for r in self.db.chunks if self._matches(r)]
+        if self._delete:
+            self.db.chunks[:] = [r for r in self.db.chunks if r not in found]
+        return Result(found)
+
+
+class _Rpc:
+    def __init__(self, db, params):
+        self.db, self.params = db, params
+
+    def execute(self):
+        def distance(a, b):
+            dot = sum(x * y for x, y in zip(a, b))
+            return 1 - dot / ((sum(x * x for x in a) ** 0.5) * (sum(y * y for y in b) ** 0.5))
+
+        rows = [r for r in self.db.chunks if self.params["only_kind"] in (None, r["kind"])]
+        scored = sorted(({**r, "distance": distance(self.params["query_embedding"], r["embedding"])} for r in rows),
+                        key=lambda r: r["distance"])
+        return Result(scored[: self.params["match_count"]])
