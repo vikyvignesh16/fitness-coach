@@ -1,0 +1,38 @@
+# Agent glossary
+
+Words from the agent lessons, in plain language. It grows with each lesson.
+
+* **Agent**: a model in a loop. It reads the situation, picks an action (answer, or call a tool), sees the result, and repeats until it can answer.
+* **Workflow**: a fixed recipe written in code, with a model call at some steps. Use it when you know the steps in advance.
+* **Framework**: ready made parts for building agents (the loop, memory, tools, hooks, tracing). We use Google ADK.
+* **Model**: the part that turns text in into text out. Here a GPT model reached through OpenRouter. It only asks for things. Our code does them.
+* **Instructions** (system prompt): who the agent is and how it must behave. Instructions help, but they are not a safety limit. Limits live in code.
+* **Token**: a small piece of text, roughly three quarters of a word. Models charge per token, input and output separately.
+* **LlmAgent** (ADK): the model, its instructions and its tools bundled together.
+* **Runner** (ADK): the engine that runs the loop.
+* **Session** (ADK): one conversation and its history.
+* **Callback** (ADK): our own function that ADK runs before or after a step. `before_model_callback` can stop a model call. `after_model_callback` sees the result. This is where the spending cap lives.
+* **Thought part**: the model's private reasoning summary, marked in the reply. Not shown to the user.
+* **Receipt** (llm_calls row): one line per model call with tokens and cost. Never the question or answer.
+* **Cap**: the most we spend in a month on model calls. A plain tested function, checked before each call.
+* **Structured output** (output schema): a fixed form the model must fill in, written as a Pydantic class. ADK passes the shape to the model, and we check the reply against the same class.
+* **Pydantic**: a Python library where a class lists fields and their rules (type, length, allowed words). It validates data and gives plain error messages.
+* **Validation**: checking that a reply fits the form. It checks the shape, not whether the content is true.
+* **Silent failure**: the program runs and the answer looks fine but is wrong, such as lost history or a confident wrong claim. Worse than a loud crash, because nobody notices.
+* **Coroutine**: what an async function gives back when you call it without await. A recipe card that nobody cooked.
+* **Tool**: a plain function the model may ask for. The model never runs it. Our code does, so our code decides what is allowed. ADK shows the model the function's name, docstring and type hints, so a clear docstring is part of the tool.
+* **Event**: one recorded step of the loop: the model asks for a tool, our code runs it, the model answers. Printing events is how you debug an agent.
+* **Round**: one trip through the loop (model, then maybe tool). We cap the rounds, because a loop with no limit can run up a bill.
+* **Grounding**: giving the model real data through a tool, so it reads numbers instead of guessing them. It lowers hallucination but does not remove it.
+* **Dependency injection**: passing a part in from outside (here, the function that reads data) so tests and demos can swap in a fake.
+* **Parallel tool calls**: a model may ask for several tools in one turn. ADK delivers them in one event and runs them together. A printout that shows only the first one hides what really happened.
+* **Tool registry**: one list of every tool the agent may use, with the tables each one reads. To govern the agent you review this list. A shared test checks every tool in it against the design rules.
+* **Flag**: a fact about one number that code worked out, like "slept under 6 hours". Facts only, never advice.
+* **Drift guard**: a test that fails if two copies of the same rule (here the Python and TypeScript flag limits) stop matching.
+* **Short term memory**: the back and forth of one conversation, stored in chat_messages (grouped by chat_threads). Only the newest 20 messages go back to the model each turn, so cost stays steady.
+* **Long term memory**: short facts Vicky asked the coach to remember, stored in coach_memory (max 50 facts, 200 characters each). All of them go into every prompt, inside a fence that labels them as data.
+* **Seeding a session**: filling a fresh ADK session with our saved messages at the start of each turn. The model remembers nothing between calls, so we rebuild what it knows every time.
+* **Instruction provider**: an instruction written as a function. ADK treats a plain text instruction as a template and fills {placeholders} from session state. A function skips that, which keeps {braces} inside remembered facts harmless.
+* **Gate** (before_tool_callback): our code that runs before a tool and can refuse it. The save_memory gate refuses the tool unless the user's message asks to remember something.
+* **Scripted model**: a fake model that plays back prepared replies and records what it was sent. It lets a whole chat turn be tested for free.
+* **Approved writes list**: the short list in the rules test of which tools may change data and which tables. Adding a write power means a human edits it.

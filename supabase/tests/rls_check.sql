@@ -51,3 +51,25 @@ where has_table_privilege('authenticated', x.t, p);
 select 'anon can write ' || t as problem
 from (values ('strength_sessions'), ('strength_sets')) as x(t), unnest(array['insert', 'update', 'delete']) as p
 where has_table_privilege('anon', x.t, p);
+
+-- 8. Model call log and cap (migration 0017). All of these must return zero rows.
+set local role anon;
+select 'llm_calls' as t, count(*) from llm_calls having count(*) > 0
+union all select 'coach_settings', count(*) from coach_settings having count(*) > 0;
+reset role;
+select 'authenticated can write llm_calls' as problem
+from unnest(array['insert', 'update', 'delete']) as p where has_table_privilege('authenticated', 'llm_calls', p);
+select 'authenticated can ' || p || ' coach_settings' as problem
+from unnest(array['insert', 'delete']) as p where has_table_privilege('authenticated', 'coach_settings', p);
+
+-- 9. Chat memory (migration 0018). All of these must return zero rows.
+set local role anon;
+select 'chat_threads' as t, count(*) from chat_threads having count(*) > 0
+union all select 'chat_messages', count(*) from chat_messages having count(*) > 0
+union all select 'coach_memory', count(*) from coach_memory having count(*) > 0;
+reset role;
+select 'authenticated can ' || p || ' ' || t as problem
+from (values ('chat_threads'), ('chat_messages'), ('coach_memory')) as x(t), unnest(array['insert', 'update']) as p
+where has_table_privilege('authenticated', x.t, p);
+select 'anon can touch ' || t as problem
+from (values ('chat_threads'), ('chat_messages'), ('coach_memory')) as x(t) where has_table_privilege('anon', x.t, 'select');
