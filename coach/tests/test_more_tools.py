@@ -68,7 +68,7 @@ def test_the_queries_never_ask_the_database_for_notes():
 def test_one_question_can_use_two_tools_in_the_hand_written_loop():
     from coach.loop_by_hand import run_loop
     from coach.registry import Readers, Writers, build_tools
-    readers = Readers(health=lambda a, b: [{"day": "2026-11-08", "sleep_asleep_min": 252}], runs=lambda a, b: [run("2026-11-08", km=18, secs=6000)], plan_day=lambda d: PLAN)
+    readers = Readers(health=lambda a, b: [{"day": "2026-11-08", "sleep_asleep_min": 252}], runs=lambda a, b: [run("2026-11-08", km=18, secs=6000)], plan_day=lambda d: PLAN, library=lambda q: [])
     tools = {s.name: s.fn for s in build_tools(readers, Writers(save_fact=lambda fact: None), NOW)}
     steps = iter([{"tool": "get_plan_day", "args": {"day": "2026-11-08"}}, {"tool": "get_recent_runs", "args": {"days": 3}},
                   {"tool": "get_recent_health", "args": {"days": 3}}, {"answer": "done"}])

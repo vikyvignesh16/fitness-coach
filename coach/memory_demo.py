@@ -20,7 +20,7 @@ from coach.registry import Readers, Writers
 from coach.tests.fakes import FakeStore
 from ingest.import_plan import find_owner
 
-READERS = Readers(health=lambda a, b: [], runs=lambda a, b: [], plan_day=lambda d: None)
+READERS = Readers(health=lambda a, b: [], runs=lambda a, b: [], plan_day=lambda d: None, library=lambda q: [])
 
 
 def main() -> None:

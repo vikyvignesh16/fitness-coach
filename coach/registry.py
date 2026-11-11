@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable
 
+from coach.embeddings import Post, openrouter_post
+from coach.library import Hit, search
+from coach.library_tools import Lookup, make_library_tool
 from coach.memory import add_fact
 from coach.memory_tools import make_save_memory_tool
 from coach.tools import (Fetch, PlanFetch, RunsFetch, health_fetcher, make_health_tool, make_plan_day_tool, make_runs_tool,
@@ -25,6 +28,7 @@ class Readers:
     health: Fetch
     runs: RunsFetch
     plan_day: PlanFetch
+    library: Lookup  # question -> closest library chunks
 
 
 @dataclass(frozen=True)
@@ -36,8 +40,11 @@ def supabase_writers(sb, owner: str) -> Writers:
     return Writers(save_fact=lambda fact: add_fact(sb, owner, fact, "chat"))
 
 
-def supabase_readers(sb, owner: str) -> Readers:
-    return Readers(health=health_fetcher(sb, owner), runs=runs_fetcher(sb, owner), plan_day=plan_fetcher(sb, owner))
+def supabase_readers(sb, owner: str, embed_post: Post | None = None) -> Readers:
+    def library(question: str) -> list[Hit]:
+        return search(sb, owner, question, post=embed_post or openrouter_post())  # the key is read only when a search happens
+
+    return Readers(health=health_fetcher(sb, owner), runs=runs_fetcher(sb, owner), plan_day=plan_fetcher(sb, owner), library=library)
 
 
 def build_tools(readers: Readers, writers: Writers, now: datetime | None = None) -> list[ToolSpec]:
@@ -45,5 +52,6 @@ def build_tools(readers: Readers, writers: Writers, now: datetime | None = None)
         ToolSpec("get_recent_health", make_health_tool(readers.health, now), ("health_daily",)),
         ToolSpec("get_recent_runs", make_runs_tool(readers.runs, now), ("runs",)),
         ToolSpec("get_plan_day", make_plan_day_tool(readers.plan_day), ("plan_versions", "plan_days")),
+        ToolSpec("search_library", make_library_tool(readers.library), ("library_chunks",)),
         ToolSpec("save_memory", make_save_memory_tool(writers.save_fact), reads=("coach_memory",), writes=("coach_memory",)),
     ]
