@@ -338,3 +338,13 @@ def test_a_normal_turn_logs_nothing_that_holds_the_message_or_the_token(caplog):
     with caplog.at_level(logging.DEBUG, logger="coach"):
         post(client, {"text": SECRET_TEXT})
     assert SECRET_TEXT not in caplog.text and "token-vicky" not in caplog.text and "private words" not in caplog.text
+
+
+def test_a_missing_setting_is_named_but_a_value_is_never_printed(monkeypatch):
+    from coach.api import _need
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    with pytest.raises(SystemExit) as err:
+        _need("SUPABASE_URL")
+    assert str(err.value) == "SUPABASE_URL is not set."
+    monkeypatch.setenv("SUPABASE_URL", "  https://secret.example  ")
+    assert _need("SUPABASE_URL") == "https://secret.example"

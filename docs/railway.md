@@ -11,8 +11,21 @@ All services deploy from the private GitHub repository, branch `main`.
   * `NEXT_PUBLIC_SUPABASE_URL`
   * `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 * Never put `SUPABASE_SERVICE_ROLE_KEY` here.
+* `COACH_API_URL` (server side only, so no `NEXT_PUBLIC_`): the private address of the coach service, `http://coach-api.railway.internal:8000`. It can be set after the first deploy. Without it the Chat tab says the coach is not connected.
 * Networking: generate a public domain (https). The iPhone install needs https.
 * The live address: https://fitness-coach-production-e7b2.up.railway.app (public, nothing secret in it; every page except the login needs you to sign in).
+
+## Service: coach-api (the coach, always on)
+Runs the coach for the Chat tab. The web service sends it your message and your login token over Railway's **private network**. It has **no public domain**, so nothing on the internet can reach it. Its own login check is a second lock. See docs/decisions.md.
+* Root directory: `/` (repo root)
+* Start command: `uvicorn coach.api:build_app --factory --host :: --port $PORT`
+  * `--host ::` listens on IPv6 as well as IPv4. Railway environments made before 16 Oct 2025 are IPv6 only on the private network, newer ones are dual stack, so `::` works in both.
+* Variables (typed by Vicky): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, `COACH_ENABLED` (`true`), `PORT` (`8000`, set it yourself so the private address is known).
+* Health check path: `/healthz` (answers `{"ok": true}`, no data).
+* Networking: do NOT generate a public domain. The private name is `coach-api.railway.internal`, so the address for the web service is `http://coach-api.railway.internal:8000`.
+* Switch off: set `COACH_ENABLED` to `false` and redeploy. Every chat then answers 503 and no model is called.
+* Logs hold error types and counts only. If you ever see a message, a token or a key in them, stop the service and tell me.
+* After the first deploy, check the private route (Railway's docs do not say whether a service with no public domain is reachable privately, so we confirm it): send one message from the Chat tab.
 
 ## Service: runs (cron, pulls runs from COROS)
 * Root directory: `/` (repo root)
