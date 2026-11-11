@@ -50,11 +50,19 @@ class FakeStore:
 class _StoreQuery:
     def __init__(self, store, name):
         self.store, self.name = store, name
-        self._filters, self._desc, self._limit, self._insert, self._delete = [], False, None, None, False
+        self._filters, self._ranges, self._desc, self._limit, self._insert, self._delete = [], [], False, None, None, False
 
     def select(self, *_): return self
     def eq(self, column, value):
         self._filters.append((column, value))
+        return self
+
+    def gte(self, column, value):
+        self._ranges.append((column, ">=", value))
+        return self
+
+    def lte(self, column, value):
+        self._ranges.append((column, "<=", value))
         return self
 
     def order(self, column, desc=False):
@@ -81,10 +89,12 @@ class _StoreQuery:
             return Result(gone)
         if self._insert is not None:
             self.store._clock += 1
-            row = {"id": f"{self.name}-{self.store._clock}", "created_at": self.store._clock, **self._insert}
+            make_id = getattr(self.store, "make_id", None)  # a test store can hand out real looking UUIDs
+            row = {"id": make_id(self.store._clock) if make_id else f"{self.name}-{self.store._clock}", "created_at": self.store._clock, **self._insert}
             rows.append(row)
             return Result([row])
-        found = [r for r in rows if all(r.get(c) == v for c, v in self._filters)]
+        found = [r for r in rows if all(r.get(c) == v for c, v in self._filters)
+                 and all(c not in r or (r[c] >= v if op == ">=" else r[c] <= v) for c, op, v in self._ranges)]
         found.sort(key=lambda r: r["created_at"], reverse=self._desc)
         return Result(found[: self._limit] if self._limit else found)
 

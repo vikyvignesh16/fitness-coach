@@ -4,7 +4,7 @@ import pytest
 
 from coach.embeddings import DIMENSIONS, MODEL, CapReached
 from coach.library import MAX_DISTANCE, MAX_K, MAX_QUESTION, index_document, search
-from coach.tests.fakes import FakeLibrary
+from coach.tests.fakes import FakeLibrary, FakeSupabase
 
 TOPICS = {0: ("run", "easy", "pace", "jog"), 1: ("database", "table", "row"), 2: ("sleep", "hrv", "rest")}
 
@@ -191,3 +191,34 @@ def test_bad_input_to_search_is_refused_before_any_call(kwargs):
     with pytest.raises(ValueError):
         search(db, "me", post=embedder, **kwargs)
     assert len(embedder.requests) == calls and db.rpc_calls == []
+
+
+# ------------------------------------------------------------ separate clients (the deployed service)
+def test_the_search_runs_on_one_client_and_the_cost_is_logged_on_another():
+    user_db, embedder, _ = build()
+    log_db = FakeSupabase()
+    user_db.inserts.clear()
+    hits = search(user_db, "me", "easy jog", post=embedder, log_sb=log_db)
+    assert hits and user_db.inserts == []  # the signed in user's client wrote nothing, it only searched
+    assert [r["purpose"] for r in log_db.inserts] == ["embed_search"]
+
+
+def test_the_cap_is_read_from_the_log_client_not_the_search_client():
+    user_db, embedder, _ = build()
+    with pytest.raises(CapReached):
+        search(user_db, "me", "easy jog", post=embedder, log_sb=FakeSupabase(spent="10"))
+
+
+def test_without_a_log_client_the_search_client_does_both():
+    db, embedder, _ = build()
+    before = len(db.inserts)
+    search(db, "me", "easy jog", post=embedder)
+    assert len(db.inserts) == before + 1
+
+
+def test_readers_pass_the_log_client_through_to_the_search():
+    from coach.registry import supabase_readers
+    user_db, embedder, _ = build()
+    log_db = FakeSupabase()
+    readers = supabase_readers(user_db, "me", embed_post=embedder, log_sb=log_db)
+    assert readers.library("easy jog") and [r["purpose"] for r in log_db.inserts] == ["embed_search"]

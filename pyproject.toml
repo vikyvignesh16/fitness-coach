@@ -9,6 +9,8 @@ dependencies = [
     "mcp>=2.3.0",
     "google-adk==2.13.0",
     "litellm==1.106.2",
+    "fastapi==0.162.0",
+    "uvicorn==0.54.0",
 ]
 
 [dependency-groups]
