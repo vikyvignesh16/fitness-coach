@@ -59,3 +59,33 @@ def check_cap(spent: Decimal, cap: Decimal) -> CapDecision:
     if spent < 0 or cap < 0:
         raise ValueError("Spend and cap cannot be negative.")
     return CapDecision(allowed=spent < cap, spent=spent, cap=cap, warn=cap > 0 and spent >= cap * WARN_AT)
+
+
+# ---- Worst case of one chat turn (lesson 7) ----
+MAX_OUTPUT_TOKENS = 2000  # the longest reply the model may write in one call. Sent with every call, so a worst case exists.
+MAX_TOOL_CALLS = 6  # per turn. Our deepest realistic turn uses about 3.
+MAX_TOOL_RESULT_TOKENS = 4000  # tool results are capped at 12,000 characters, about this many tokens
+TOKENS_PER_CHAR = Decimal(1) / 3  # a cautious guess: real text is nearer one token per four characters
+EXTRA_MODEL_CALLS = 2  # the final answer, and one revision if a check fails
+
+
+def worst_case_cost(model: str, prompt_chars: int) -> Decimal:
+    """The most one turn could cost: every allowed model call, each as long as allowed, with every tool result as big as allowed.
+
+    prompt_chars is the size of the instruction, the history, the new message and the tool descriptions. The result is a
+    ceiling, not a forecast. Real turns cost far less, but a ceiling is what a cap needs.
+    """
+    if prompt_chars < 0:
+        raise ValueError("prompt_chars cannot be negative.")
+    calls = MAX_TOOL_CALLS + EXTRA_MODEL_CALLS
+    base_tokens = int(prompt_chars * TOKENS_PER_CHAR) + 1
+    total_in = sum(base_tokens + MAX_TOOL_RESULT_TOKENS * min(i, MAX_TOOL_CALLS) for i in range(calls))
+    return cost_usd(model, total_in, MAX_OUTPUT_TOKENS * calls)
+
+
+def check_worst_case(spent: Decimal, worst: Decimal, cap: Decimal) -> CapDecision:
+    """A turn may start only if even its worst case fits under the cap. Stricter than check_cap, which only looks at what is spent."""
+    if spent < 0 or worst < 0 or cap < 0:
+        raise ValueError("Spend, worst case and cap cannot be negative.")
+    allowed = spent + worst <= cap
+    return CapDecision(allowed=allowed, spent=spent, cap=cap, warn=cap > 0 and spent >= cap * WARN_AT)
