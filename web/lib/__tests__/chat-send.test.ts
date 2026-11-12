@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { sendToCoach, type SendDeps } from "../chat-send";
+import { connectionCode, sendToCoach, type SendDeps } from "../chat-send";
 
 const ID = "7f3a1b2c-1111-4222-8333-444455556666";
 const TOKEN = "eyJ.super-secret-token";
@@ -107,4 +107,23 @@ describe("errors use our words, never the service's, and never hold the token", 
     expect(r).toEqual({ ok: false, error: "Could not reach the coach." });
   });
   it("never puts the token in a successful result either", async () => expect(JSON.stringify(await send(deps().deps))).not.toContain(TOKEN));
+});
+
+describe("what is logged when the coach cannot be reached", () => {
+  it("logs the error code only, never the address, the token or the message", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = Object.assign(new TypeError("fetch failed to http://coach-api.railway.internal:8000"), {
+      cause: { code: "ECONNREFUSED", message: `connect refused ${TOKEN}` },
+    });
+    await send(deps({}, err).deps);
+    const logged = JSON.stringify(spy.mock.calls);
+    expect(logged).toContain("ECONNREFUSED");
+    expect(logged).not.toContain("railway.internal");
+    expect(logged).not.toContain(TOKEN);
+    spy.mockRestore();
+  });
+  it("turns a strange code into unknown", () => {
+    expect(connectionCode({ cause: { code: "bad code with spaces and http://x" } })).toBe("unknown");
+    expect(connectionCode("nope")).toBe("unknown");
+  });
 });
