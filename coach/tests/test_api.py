@@ -348,3 +348,33 @@ def test_a_missing_setting_is_named_but_a_value_is_never_printed(monkeypatch):
     assert str(err.value) == "SUPABASE_URL is not set."
     monkeypatch.setenv("SUPABASE_URL", "  https://secret.example  ")
     assert _need("SUPABASE_URL") == "https://secret.example"
+
+
+# ------------------------------------------------------------ the real client wiring (no network: a fake transport records what is sent)
+def _recording_options(seen):
+    from supabase.lib.client_options import SyncClientOptions
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append((request.url.path, request.headers.get("authorization")))
+        return httpx.Response(200, json=[])
+
+    return SyncClientOptions(httpx_client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def test_the_user_client_sends_the_users_token_on_reads_and_on_the_library_search():
+    from coach.api import build_user_client
+    seen = []
+    client = build_user_client("https://example.supabase.co", "eyJ.anon.key", "USER-TOKEN-123", _recording_options(seen))
+    client.table("health_daily").select("day").execute()
+    client.rpc("match_library_chunks", {"query_embedding": [0.1], "match_count": 1}).execute()
+    assert [auth for _, auth in seen] == ["Bearer USER-TOKEN-123", "Bearer USER-TOKEN-123"]
+    assert [path for path, _ in seen] == ["/rest/v1/health_daily", "/rest/v1/rpc/match_library_chunks"]
+
+
+def test_one_users_token_never_reaches_another_client():
+    from coach.api import build_user_client
+    seen = []
+    build_user_client("https://example.supabase.co", "eyJ.anon.key", "USER-TOKEN-123", _recording_options(seen))
+    other = build_user_client("https://example.supabase.co", "eyJ.anon.key", "OTHER-TOKEN-456", _recording_options(seen))
+    other.table("health_daily").select("day").execute()
+    assert [auth for _, auth in seen] == ["Bearer OTHER-TOKEN-456"]

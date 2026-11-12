@@ -12,6 +12,7 @@ import type { InsightsRange } from "@/lib/insights-range";
 import type { RunForTable } from "@/lib/workout-table";
 
 import { ANKLE_GATE_ID } from "@/lib/gate-record";
+import { FALLBACK_CAP_USD, monthStartUtc, type ChatMessage, type ChatThread, type RememberedFact, type Spend } from "@/lib/chat";
 
 export type GoalTargets = { a: string; b: string; c: string };
 
@@ -480,4 +481,59 @@ export async function loadWorkoutRuns(from: string, to: string): Promise<RunForT
   } catch {
     return [];
   }
+}
+
+
+// ---- The Chat tab
+
+export type ChatPageData = {
+  threads: ChatThread[];
+  activeThreadId: string | null; // null for a new chat, or when the id in the address is not one of yours
+  messages: ChatMessage[];
+  facts: RememberedFact[];
+  spend: Spend;
+};
+
+const RECENT_THREADS = 15;
+const MAX_SHOWN_MESSAGES = 200;
+
+/** Everything the Chat page shows. Read with the signed in user's session, so Row Level Security shows only your own rows. */
+export async function loadChatPage(threadParam: string | null): Promise<ChatPageData> {
+  const supabase = await createClient();
+
+  const threads = await supabase.from("chat_threads").select("id, title, created_at").order("created_at", { ascending: false }).limit(RECENT_THREADS);
+  if (threads.error) throw new Error("Could not read your chats.");
+
+  let activeThreadId: string | null = null;
+  let messages: ChatMessage[] = [];
+  if (threadParam) {
+    const found = await supabase.from("chat_threads").select("id").eq("id", threadParam).maybeSingle();
+    if (found.error) throw new Error("Could not read your chat.");
+    if (found.data) {
+      activeThreadId = found.data.id;
+      const rows = await supabase.from("chat_messages").select("id, role, body, created_at")
+        .eq("thread_id", activeThreadId).order("created_at", { ascending: true }).limit(MAX_SHOWN_MESSAGES);
+      if (rows.error) throw new Error("Could not read your messages.");
+      messages = (rows.data ?? []) as ChatMessage[];
+    }
+  }
+
+  const facts = await supabase.from("coach_memory").select("id, fact, created_at").order("created_at", { ascending: true });
+  if (facts.error) throw new Error("Could not read what the coach remembers.");
+
+  const calls = await supabase.from("llm_calls").select("cost_usd").gte("at", monthStartUtc(todayLocal()));
+  if (calls.error) throw new Error("Could not read this month's spending.");
+  const settings = await supabase.from("coach_settings").select("monthly_cap_usd").maybeSingle();
+  if (settings.error) throw new Error("Could not read the spending cap.");
+
+  return {
+    threads: (threads.data ?? []) as ChatThread[],
+    activeThreadId,
+    messages,
+    facts: (facts.data ?? []) as RememberedFact[],
+    spend: {
+      spentUsd: (calls.data ?? []).reduce((sum, r) => sum + Number(r.cost_usd), 0),
+      capUsd: settings.data ? Number(settings.data.monthly_cap_usd) : FALLBACK_CAP_USD,
+    },
+  };
 }

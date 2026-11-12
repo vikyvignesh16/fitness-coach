@@ -205,6 +205,15 @@ def _need(name: str) -> str:
     return value
 
 
+def build_user_client(url: str, anon_key: str, token: str, options=None):
+    """A database client whose every request carries this user's login, so Row Level Security applies to it."""
+    from supabase import create_client
+
+    client = create_client(url, anon_key, options=options) if options else create_client(url, anon_key)
+    client.postgrest.auth(token)
+    return client
+
+
 def real_deps() -> Deps:
     import litellm
     from google.adk.models.lite_llm import LiteLlm
@@ -221,9 +230,7 @@ def real_deps() -> Deps:
         return user.id if user else None
 
     def user_client(token: str):
-        client = create_client(url, anon)
-        client.postgrest.auth(token)  # every query from this client now runs as the signed in user
-        return client
+        return build_user_client(url, anon, token)
 
     return Deps(verify_token=verify_token, user_client=user_client, service_client=create_client(url, service),
                 make_llm=lambda: LiteLlm(model=f"openrouter/{MODEL}"))

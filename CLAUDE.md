@@ -57,6 +57,7 @@ Fill these in as the project grows. Keep them current.
 * Read only SQL against the live database: `supabase db query --remote --read-only "select ..."`
 * Import plan (dry run, then write): `uv run --python 3.12 python -m ingest.import_plan` and add `--apply`. It refuses to run twice.
 * COROS first login (once, on Vicky's own computer, opens a browser): `uv run --python 3.12 python -m ingest.coros_login`. Details in the coros-mcp skill.
+* Coach service locally (needs SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, OPENROUTER_API_KEY in .env): `uv run --python 3.12 --env-file .env uvicorn coach.api:build_app --factory --port 8000`. On Railway it runs as the private service coach-api (docs/railway.md). `COACH_ENABLED=false` switches it off.
 * Pull runs from COROS (dry run, then save, safe to repeat): `uv run --python 3.12 python -m ingest.coros_runs --days 14` and add `--apply`.
 * Note: the Supabase CLI refuses write SQL on the live project unless Vicky agrees, so ask before using `db query` without `--read-only`.
 * Supabase project ref: jmandamylkmejkgosqvg (eu-west-1). v5.1 is imported as plan_versions id a3204de5-db42-484a-86a9-558344b3eae7.
