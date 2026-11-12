@@ -33,6 +33,7 @@ Plan v5.1 (file: data/paris_marathon_2027_v5_1_coros_ready.json), approved 2 Nov
 * Build the smallest working version first, then improve it. Vicky wants tracking running early.
 * Ask before anything that cannot be undone: deleting data, rewriting a plan, writing to the watch, changing the database in a way that loses rows.
 * Work in small steps and run the tests after each one.
+* Keep the Docs page current. When you add a file, a migration or a route, add its plain sentence in `web/lib/docs/` (modules.ts, tables.ts, pipelines.ts or flows.ts). `lib/__tests__/docs-drift.test.ts` fails if you do not. When a file changes what it does, update its sentence by hand, because the test cannot tell.
 * One Git branch per task (`task-NN-short-name`). Commit small steps there. Merge to `main` and push only after Vicky approves the task, because Railway deploys `main`.
 
 ## Hard rules

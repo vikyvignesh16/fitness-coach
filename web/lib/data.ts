@@ -12,6 +12,7 @@ import type { InsightsRange } from "@/lib/insights-range";
 import type { RunForTable } from "@/lib/workout-table";
 
 import { ANKLE_GATE_ID } from "@/lib/gate-record";
+import { type CallRow, lookbackStartDay } from "@/lib/costs";
 import { FALLBACK_CAP_USD, monthStartUtc, type ChatMessage, type ChatThread, type RememberedFact, type Spend } from "@/lib/chat";
 
 export type GoalTargets = { a: string; b: string; c: string };
@@ -536,4 +537,31 @@ export async function loadChatPage(threadParam: string | null): Promise<ChatPage
       capUsd: settings.data ? Number(settings.data.monthly_cap_usd) : FALLBACK_CAP_USD,
     },
   };
+}
+
+const COST_PAGE = 1000;
+const COST_MAX_PAGES = 10;
+
+export type CostsData = { rows: CallRow[]; capUsd: number; truncated: boolean };
+
+/**
+ * Every receipt in llm_calls for the last six months, plus the monthly cap. Read with the signed in user's session, so
+ * Row Level Security shows only your own rows. Only the columns below are read: never a message, an answer or a key.
+ */
+export async function loadCosts(today: string): Promise<CostsData> {
+  const supabase = await createClient();
+  const since = monthStartUtc(lookbackStartDay(today));
+  const rows: CallRow[] = [];
+  let truncated = false;
+  for (let page = 0; page < COST_MAX_PAGES; page++) {
+    const got = await supabase.from("llm_calls").select("at, purpose, model, input_tokens, output_tokens, cost_usd, ok, error")
+      .gte("at", since).order("at", { ascending: true }).order("id", { ascending: true }).range(page * COST_PAGE, page * COST_PAGE + COST_PAGE - 1);
+    if (got.error) throw new Error("Could not read the spending receipts.");
+    rows.push(...((got.data ?? []) as CallRow[]));
+    if ((got.data ?? []).length < COST_PAGE) break;
+    if (page === COST_MAX_PAGES - 1) truncated = true;
+  }
+  const settings = await supabase.from("coach_settings").select("monthly_cap_usd").maybeSingle();
+  if (settings.error) throw new Error("Could not read the spending cap.");
+  return { rows, capUsd: settings.data ? Number(settings.data.monthly_cap_usd) : FALLBACK_CAP_USD, truncated };
 }

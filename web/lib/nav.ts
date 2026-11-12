@@ -13,6 +13,8 @@ export const MENU_LINKS = [
   { href: "/plan", label: "Training plan" },
   { href: "/checkin", label: "Weekly check in" },
   { href: "/gates/ankle", label: "Ankle check" },
+  { href: "/costs", label: "Costs" },
+  { href: "/docs", label: "Docs" },
 ] as const;
 
 /** Home is only active on "/". Other tabs stay active on their sub pages, like /runs/abc. */
@@ -23,7 +25,7 @@ export function isActiveTab(pathname: string, href: string): boolean {
 }
 
 /** Pages that use the full width on a laptop. Everything else keeps a readable column. */
-const WIDE_PAGES = ["/", "/insights"];
+const WIDE_PAGES = ["/", "/insights", "/costs", "/docs"];
 
 export function isWidePage(pathname: string): boolean {
   return WIDE_PAGES.some((p) => (p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(p + "/")));

@@ -60,3 +60,8 @@ Words from the agent lessons, in plain language. It grows with each lesson.
 * **Rate limit**: at most 20 turns an hour per user, one at a time. A second brake behind the monthly cap.
 * **Server action**: a function in the Next.js app that runs on the server when a button is pressed. It checks the login itself, because the browser can send anything.
 * **Log hygiene**: error messages from model libraries can repeat what you sent. The coach service silences those libraries and logs only the error type.
+* **Pipeline**: a job that moves data from one place to another, for example COROS to the runs table. Ours run on a timer in Railway.
+* **Upsert**: save a row if it is new, update it if it already exists. It is what makes a pipeline safe to run twice.
+* **Row Level Security (RLS)**: a rule inside the database that lets a signed in user see only their own rows. The server key skips it, so server code always names your user id.
+* **Docs drift test**: a test that reads the repo and fails when a file, a table or a decision is missing from the Docs page data, or when the Docs page points at something that is gone. It checks that things exist, not that a sentence is still true.
+* **Equivalent mutant**: a deliberate break in the code that no test can see because it changes nothing anyone could observe. We note these instead of forcing a test.

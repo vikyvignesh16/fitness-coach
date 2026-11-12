@@ -161,6 +161,10 @@
   --m-recovery: #2a78d6;
   --m-load-run: #1baf7a;
   --m-load-strength: #6250d6;
+  --m-cost-chat: #2a78d6;
+  --m-cost-search: #eb6834;
+  --m-cost-indexing: #1baf7a;
+  --m-cost-other: #eda100;
 }
 .dark {
   --m-deep: #3987e5;
@@ -183,4 +187,8 @@
   --m-recovery: #3987e5;
   --m-load-run: #199e70;
   --m-load-strength: #9085e9;
+  --m-cost-chat: #3987e5;
+  --m-cost-search: #d95926;
+  --m-cost-indexing: #199e70;
+  --m-cost-other: #c98500;
 }
