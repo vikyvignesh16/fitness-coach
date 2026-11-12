@@ -18,8 +18,9 @@ All services deploy from the private GitHub repository, branch `main`.
 ## Service: coach-api (the coach, always on)
 Runs the coach for the Chat tab. The web service sends it your message and your login token over Railway's **private network**. It has **no public domain**, so nothing on the internet can reach it. Its own login check is a second lock. See docs/decisions.md.
 * Root directory: `/` (repo root)
-* Start command: `uvicorn coach.api:build_app --factory --host :: --port $PORT`
-  * `--host ::` listens on IPv6 as well as IPv4. Railway environments made before 16 Oct 2025 are IPv6 only on the private network, newer ones are dual stack, so `::` works in both.
+* Start command: `python -m coach.serve`
+  * It listens on IPv4 and IPv6 at once, on the port in `PORT`. Railway's health check connects over IPv4, and the private network in an older (legacy) environment is IPv6 only. Uvicorn's `--host` takes one address, and `--host ::` alone failed all 11 health checks, so coach/serve.py opens both sockets itself.
+  * With `--host 0.0.0.0` the health check was green, but the Chat tab said "Could not reach the coach", because the web service looked for the coach over IPv6.
 * Variables (typed by Vicky): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, `COACH_ENABLED` (`true`), `PORT` (`8000`, set it yourself so the private address is known).
 * Health check path: `/healthz` (answers `{"ok": true}`, no data).
 * Networking: do NOT generate a public domain. The private name is `coach-api.railway.internal`, so the address for the web service is `http://coach-api.railway.internal:8000`.
