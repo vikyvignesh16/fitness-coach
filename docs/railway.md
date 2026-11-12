@@ -18,8 +18,9 @@ All services deploy from the private GitHub repository, branch `main`.
 ## Service: coach-api (the coach, always on)
 Runs the coach for the Chat tab. The web service sends it your message and your login token over Railway's **private network**. It has **no public domain**, so nothing on the internet can reach it. Its own login check is a second lock. See docs/decisions.md.
 * Root directory: `/` (repo root)
-* Start command: `uvicorn coach.api:build_app --factory --host :: --port $PORT`
-  * `--host ::` listens on IPv6 as well as IPv4. Railway environments made before 16 Oct 2025 are IPv6 only on the private network, newer ones are dual stack, so `::` works in both.
+* Start command: `uvicorn coach.api:build_app --factory --host 0.0.0.0 --port $PORT`
+  * `--host 0.0.0.0` listens on IPv4. Railway's health check connects over IPv4, and the first deploy with `--host ::` failed all 11 checks with "service unavailable" (`::` accepted IPv6 only there).
+  * This needs an environment made after 16 Oct 2025, where private names resolve to IPv4 and IPv6. In an older (legacy) environment the private network is IPv6 only, and then the web service could not reach the coach on `0.0.0.0`. This project started in November 2026, so it should be fine. The first message from the Chat tab is the real test.
 * Variables (typed by Vicky): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, `COACH_ENABLED` (`true`), `PORT` (`8000`, set it yourself so the private address is known).
 * Health check path: `/healthz` (answers `{"ok": true}`, no data).
 * Networking: do NOT generate a public domain. The private name is `coach-api.railway.internal`, so the address for the web service is `http://coach-api.railway.internal:8000`.
