@@ -32,6 +32,13 @@ function isText(value: unknown): value is string {
   return typeof value === "string";
 }
 
+/** A short code like ENOTFOUND, ECONNREFUSED or TimeoutError. Letters and digits only, so nothing else can leak into a log. */
+export function connectionCode(err: unknown): string {
+  const cause = (err as { cause?: { code?: unknown } } | null)?.cause;
+  const raw = typeof cause?.code === "string" ? cause.code : err instanceof Error ? err.name : "unknown";
+  return /^[A-Za-z0-9_]{1,40}$/.test(raw) ? raw : "unknown";
+}
+
 export async function sendToCoach(input: { text: unknown; threadId: unknown }, deps: SendDeps): Promise<ChatReply> {
   const text = isText(input.text) ? input.text.trim() : "";
   if (!text) return { ok: false, error: "Write a message first." };
@@ -50,8 +57,9 @@ export async function sendToCoach(input: { text: unknown; threadId: unknown }, d
       cache: "no-store",
       signal: AbortSignal.timeout(deps.timeoutMs ?? TIMEOUT_MS),
     });
-  } catch {
-    return { ok: false, error: "Could not reach the coach." }; // no error text: it could name the address
+  } catch (err) {
+    console.error("coach connection failed:", connectionCode(err)); // the code only, never the message: it could name the address
+    return { ok: false, error: "Could not reach the coach." };
   }
   if (!response.ok) return { ok: false, error: ERRORS[response.status] ?? GENERIC };
 
