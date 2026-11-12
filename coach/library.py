@@ -78,8 +78,13 @@ def index_document(sb, owner: str, source: str, text: str, *, kind: str, post: P
 
 
 def search(sb, owner: str, question: str, *, post: Post, k: int = DEFAULT_K, max_distance: float = MAX_DISTANCE,
-           only_kind: str | None = None, cap_override: Decimal | None = None) -> list[Hit]:
-    """The chunks closest in meaning to the question, closest first. Chunks further than max_distance are left out."""
+           only_kind: str | None = None, cap_override: Decimal | None = None, log_sb=None) -> list[Hit]:
+    """The chunks closest in meaning to the question, closest first. Chunks further than max_distance are left out.
+
+    sb runs the vector search. In the deployed service that is the signed in user's client, so Row Level Security applies.
+    log_sb is the client that checks the cap and writes the cost receipt. Those tables only the service may write, so it
+    is a separate (service role) client. When log_sb is not given, sb does both, as in the demos.
+    """
     text = (question or "").strip() if isinstance(question, str) else ""
     if not text:
         raise ValueError("The question cannot be empty.")
@@ -89,7 +94,7 @@ def search(sb, owner: str, question: str, *, post: Post, k: int = DEFAULT_K, max
         raise ValueError(f"k must be a whole number from 1 to {MAX_K}.")
     if only_kind is not None and only_kind not in KINDS:
         raise ValueError(f"only_kind must be one of {KINDS}.")
-    vector = embed(sb, owner, [text], post=post, purpose="embed_search", cap_override=cap_override).vectors[0]
+    vector = embed(log_sb or sb, owner, [text], post=post, purpose="embed_search", cap_override=cap_override).vectors[0]
     rows = sb.rpc("match_library_chunks", {"query_embedding": vector, "match_count": k, "only_kind": only_kind}).execute().data
     hits = [Hit(r["id"], r["source"], r["kind"], r["heading"], r["body"], float(r["distance"])) for r in rows]
     return sorted((h for h in hits if h.distance <= max_distance), key=lambda h: h.distance)[:k]

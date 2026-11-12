@@ -40,9 +40,11 @@ def supabase_writers(sb, owner: str) -> Writers:
     return Writers(save_fact=lambda fact: add_fact(sb, owner, fact, "chat"))
 
 
-def supabase_readers(sb, owner: str, embed_post: Post | None = None) -> Readers:
+def supabase_readers(sb, owner: str, embed_post: Post | None = None, log_sb=None) -> Readers:
+    """Readers for one user. In the deployed service sb is the signed in user's client (so Row Level Security protects every
+    read) and log_sb is the service client that writes the cost receipt for library searches."""
     def library(question: str) -> list[Hit]:
-        return search(sb, owner, question, post=embed_post or openrouter_post())  # the key is read only when a search happens
+        return search(sb, owner, question, post=embed_post or openrouter_post(), log_sb=log_sb)  # the key is read only when a search happens
 
     return Readers(health=health_fetcher(sb, owner), runs=runs_fetcher(sb, owner), plan_day=plan_fetcher(sb, owner), library=library)
 
