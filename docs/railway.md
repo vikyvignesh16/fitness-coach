@@ -23,7 +23,7 @@ Runs the coach for the Chat tab. The web service sends it your message and your 
   * With `--host 0.0.0.0` the health check was green, but the Chat tab said "Could not reach the coach", because the web service looked for the coach over IPv6.
 * Variables (typed by Vicky): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, `COACH_ENABLED` (`true`), `PORT` (`8000`, set it yourself so the private address is known).
 * Health check path: `/healthz` (answers `{"ok": true}`, no data).
-* Networking: do NOT generate a public domain. The private name is `coach-api.railway.internal`, so the address for the web service is `http://coach-api.railway.internal:8000`.
+* Networking: do NOT generate a public domain. The private name is NOT always the service name. Railway can give a random one (ours is `poetic-motivation.railway.internal`). Read it from `coach-api`, Settings, Networking, Private Networking, and use `http://<that name>:8000` as `COACH_API_URL` on the web service. A wrong name shows up as `coach connection failed: ENOTFOUND` in the web logs.
 * Switch off: set `COACH_ENABLED` to `false` and redeploy. Every chat then answers 503 and no model is called.
 * Logs hold error types and counts only. If you ever see a message, a token or a key in them, stop the service and tell me.
 * After the first deploy, check the private route (Railway's docs do not say whether a service with no public domain is reachable privately, so we confirm it): send one message from the Chat tab.
