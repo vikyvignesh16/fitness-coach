@@ -464,3 +464,9 @@ Problem: with `--host 0.0.0.0` the health check was green, but the Chat tab said
 Chose: coach/serve.py, a small launcher (python -m coach.serve) that opens one IPv4 socket and one IPv6 socket (IPv6 only mode, so they do not clash) on the same port and hands both to uvicorn. If the machine has no IPv6 it logs that and uses IPv4 alone. If IPv4 fails it stops, because the health check needs it.
 Alternatives: `--host ::` alone (failed the health check on Railway); two uvicorn processes (twice the memory, two copies of the rate limit and lock, which would break the one turn at a time rule); Hypercorn, which accepts several binds (a new dependency for a ten line job); upgrading the Railway environment (outside the code, unclear steps).
 Checked: 4 unit tests, a mutation check (dropping IPv6 only mode fails a test), and a live run where the same server answered on 127.0.0.1 and on [::1].
+
+## 2026-11-12 The private name was not the service name
+Problem: the Chat tab said "Could not reach the coach", while coach-api was healthy and logged no /chat request. I first blamed IPv4 versus IPv6 and built the dual stack launcher (kept, it is harmless and covers old environments). That was a wrong guess, made from the docs' wording that private names are service names.
+Found by: logging the connection error code only (web/lib/chat-send.ts). It said ENOTFOUND, which means the name does not resolve. Railway's Private Networking box showed the real name, poetic-motivation.railway.internal.
+Lesson: read the real value from the dashboard, and log the failure code before guessing. The code is the only thing logged, so no address, text or token can leak.
+
